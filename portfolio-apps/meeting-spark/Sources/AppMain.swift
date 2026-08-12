@@ -31,28 +31,35 @@ final class VoiceStore: NSObject, ObservableObject, AVAudioRecorderDelegate {
     private var player: AVAudioPlayer?
     private var timer: Timer?
     private let key = "jp.egawa.meetingspark.memos"
+    private let freeNamespace = "jp.egawa.meetingspark"
+    let freeMonthlyLimit = 12
 
     override init() {
         super.init()
         memos = (try? JSONDecoder().decode([Memo].self, from: UserDefaults.standard.data(forKey: key) ?? Data())) ?? []
     }
 
-    func toggleRecording() { isRecording ? stopRecording() : startRecording() }
+    var freeMemosRemaining: Int { FreeUsageQuota.remaining(namespace: freeNamespace, limit: freeMonthlyLimit) }
+    func toggleRecording(isPro: Bool) { isRecording ? stopRecording() : startRecording(isPro: isPro) }
 
-    func startRecording() {
+    func startRecording(isPro: Bool) {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             error = "会議名を入力してください。"
             return
         }
         AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
             Task { @MainActor in
-                if granted { self?.begin() }
+                if granted { self?.begin(isPro: isPro) }
                 else { self?.error = "マイクへのアクセスを許可してください。" }
             }
         }
     }
 
-    private func begin() {
+    private func begin(isPro: Bool) {
+        guard isPro || FreeUsageQuota.consume(namespace: freeNamespace, limit: freeMonthlyLimit) else {
+            error = "今月の無料録音は使い切りました。Proなら無制限です。"
+            return
+        }
         do {
             try AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .spokenAudio)
             try AVAudioSession.sharedInstance().setActive(true)
@@ -123,7 +130,7 @@ struct MeetingHomeView: View {
                     HStack {
                         Text("\(Int(store.elapsed / 60)):\(String(format: "%02d", Int(store.elapsed) % 60))").monospacedDigit()
                         Spacer()
-                        Button { store.toggleRecording() } label: {
+                        Button { store.toggleRecording(isPro: subscription.isPro) } label: {
                             Label(store.isRecording ? "録音を止める" : "録音を始める", systemImage: store.isRecording ? "stop.circle.fill" : "record.circle")
                         }
                         .buttonStyle(.borderedProminent).tint(store.isRecording ? .red : .blue)
@@ -144,12 +151,15 @@ struct MeetingHomeView: View {
                     }
                 }
                 if !subscription.isPro {
-                    Section { Button("Proで録音と次アクション整理を続ける") { showPaywall = true } }
+                    Section {
+                        Text("無料枠: 今月あと \(store.freeMemosRemaining)/\(store.freeMonthlyLimit) 件").font(.caption).foregroundStyle(.secondary)
+                        Button("Proで無制限の録音へ") { showPaywall = true }
+                    }
                 }
             }
             .navigationTitle("会議前メモ")
             .sheet(isPresented: $showPaywall) {
-                SubscriptionPaywall(name: "会議前メモ", benefits: ["制限のない録音メモ", "会議別フォルダ", "次アクションのレビュー"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/portfolio/privacy.html")!)
+                SubscriptionPaywall(name: "会議前メモ", benefits: ["無制限の録音メモ", "会議名と次アクションの記録", "端末内だけで音声を保存"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/portfolio/privacy.html")!)
             }
             .alert("確認", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
                 Button("OK", role: .cancel) {}

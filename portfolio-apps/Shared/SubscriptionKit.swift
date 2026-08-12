@@ -1,6 +1,36 @@
 import StoreKit
 import SwiftUI
 
+/// A transparent, device-local free allowance. It resets at the beginning of each calendar month.
+/// The app always shows the allowance before the user reaches a paywall.
+enum FreeUsageQuota {
+    static func remaining(namespace: String, limit: Int, now: Date = .now) -> Int {
+        let defaults = UserDefaults.standard
+        let monthKey = "\(namespace).freeUsage.month"
+        let countKey = "\(namespace).freeUsage.count"
+        let month = monthStamp(now)
+        if defaults.string(forKey: monthKey) != month {
+            defaults.set(month, forKey: monthKey)
+            defaults.set(0, forKey: countKey)
+        }
+        return max(0, limit - defaults.integer(forKey: countKey))
+    }
+
+    @discardableResult
+    static func consume(namespace: String, limit: Int, now: Date = .now) -> Bool {
+        let remaining = remaining(namespace: namespace, limit: limit, now: now)
+        guard remaining > 0 else { return false }
+        let countKey = "\(namespace).freeUsage.count"
+        UserDefaults.standard.set(UserDefaults.standard.integer(forKey: countKey) + 1, forKey: countKey)
+        return true
+    }
+
+    private static func monthStamp(_ date: Date) -> String {
+        let components = Calendar.current.dateComponents([.year, .month], from: date)
+        return "\(components.year ?? 0)-\(components.month ?? 0)"
+    }
+}
+
 @MainActor
 final class SubscriptionManager: ObservableObject {
     let monthlyID: String

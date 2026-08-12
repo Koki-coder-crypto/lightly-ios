@@ -14,14 +14,22 @@ final class FocusStore: ObservableObject {
     @Published var remaining = 25 * 60
     @Published var isRunning = false
     @Published private(set) var sessions: [Session] = []
+    @Published var error: String?
     private var timer: Timer?
     private let key = "jp.egawa.focuspocket.sessions"
+    private let freeNamespace = "jp.egawa.focuspocket"
+    let freeMonthlyLimit = 12
 
     init() { sessions = (try? JSONDecoder().decode([Session].self, from: UserDefaults.standard.data(forKey: key) ?? Data())) ?? [] }
     deinit { timer?.invalidate() }
-    func startOrPause() { isRunning ? pause() : start() }
-    func start() {
+    var freeSessionsRemaining: Int { FreeUsageQuota.remaining(namespace: freeNamespace, limit: freeMonthlyLimit) }
+    func startOrPause(isPro: Bool) { isRunning ? pause() : start(isPro: isPro) }
+    func start(isPro: Bool) {
         guard !task.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard isPro || FreeUsageQuota.consume(namespace: freeNamespace, limit: freeMonthlyLimit) else {
+            error = "今月の無料集中セッションは使い切りました。Proなら無制限です。"
+            return
+        }
         isRunning = true
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in Task { @MainActor in self?.tick() } }
     }
@@ -44,12 +52,12 @@ struct FocusHomeView: View {
                     Text("\(store.remaining / 60):\(String(format: "%02d", store.remaining % 60))").font(.system(size: 74, weight: .bold, design: .rounded)).monospacedDigit()
                     TextField("今やること", text: $store.task).textFieldStyle(.roundedBorder).disabled(store.isRunning)
                     HStack { ForEach([15, 25, 45], id: \.self) { minutes in Button("\(minutes)分") { store.select(minutes) }.buttonStyle(.bordered).tint(store.selectedMinutes == minutes ? .blue : .gray).disabled(store.isRunning) } }
-                    Button(store.isRunning ? "一時停止" : "集中を始める") { store.startOrPause() }.buttonStyle(.borderedProminent).controlSize(.large)
+                    Button(store.isRunning ? "一時停止" : "集中を始める") { store.startOrPause(isPro: subscription.isPro) }.buttonStyle(.borderedProminent).controlSize(.large)
                     Button("リセット") { store.reset() }.font(.footnote).disabled(store.isRunning)
                 }.padding(24).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-                if !subscription.isPro { Button("Proで無制限の集中履歴へ") { showPaywall = true }.font(.subheadline.weight(.semibold)) }
+                if !subscription.isPro { VStack(spacing: 8) { Text("無料枠: 今月あと \(store.freeSessionsRemaining)/\(store.freeMonthlyLimit) セッション").font(.caption).foregroundStyle(.secondary); Button("Proで無制限の集中履歴へ") { showPaywall = true }.font(.subheadline.weight(.semibold)) } }
                 VStack(alignment: .leading, spacing: 12) { Text("完了した集中").font(.headline); if store.sessions.isEmpty { Text("最初の1回を始めると、ここに記録されます。").foregroundStyle(.secondary) } else { ForEach(store.sessions.prefix(5)) { session in HStack { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green); VStack(alignment: .leading) { Text(session.task); Text("\(session.minutes)分 · \(session.completedAt.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary) }; Spacer() } } } }.frame(maxWidth: .infinity, alignment: .leading)
-            }.padding(20) }.background(Color(uiColor: .systemGroupedBackground)).navigationTitle("集中ポケット").sheet(isPresented: $showPaywall) { SubscriptionPaywall(name: "集中ポケット", benefits: ["無制限の集中セッション", "集中履歴と週次レビュー", "ホーム画面ウィジェット（次回）"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/portfolio/privacy.html")!) }
+            }.padding(20) }.background(Color(uiColor: .systemGroupedBackground)).navigationTitle("集中ポケット").sheet(isPresented: $showPaywall) { SubscriptionPaywall(name: "集中ポケット", benefits: ["無制限の集中セッション", "集中履歴の保存", "15・25・45分の集中モード"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/portfolio/privacy.html")!) }.alert("お知らせ", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(store.error ?? "") }
         }
     }
 }
