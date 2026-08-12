@@ -2,6 +2,10 @@ name: Portfolio TestFlight
 
 on:
   workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - 'release/portfolio-upload.trigger'
 
 jobs:
   upload:
