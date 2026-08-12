@@ -17,6 +17,7 @@ targets:
       - path: Assets.xcassets
     settings:
       base:
+        GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: jp.egawa.lightly
         INFOPLIST_KEY_CFBundleDisplayName: Lightly
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
