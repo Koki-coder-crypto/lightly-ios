@@ -2,16 +2,9 @@ name: Portfolio TestFlight
 
 on:
   workflow_dispatch:
-    inputs:
-      app:
-        description: App to archive and upload
-        required: true
-        type: choice
-        options: [all, frame-drop, qr-keeper, handy-print, meeting-spark, focus-pocket]
 
 jobs:
   upload:
-    if: ${{ inputs.app == 'all' || inputs.app == matrix.app }}
     strategy:
       fail-fast: false
       matrix:
