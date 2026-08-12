@@ -56,7 +56,7 @@ jobs:
             -authenticationKeyPath "$RUNNER_TEMP/appstoreconnect/AuthKey_$APPSTORE_KEY_ID.p8" \
             -authenticationKeyID "$APPSTORE_KEY_ID" \
             -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID" \
-            CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM="$APPLE_TEAM_ID" archive
+            CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Distribution" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" archive
           xcodebuild -exportArchive -archivePath "$PWD/build/RoomRoll.xcarchive" -exportOptionsPlist ../../ci/RoomRollExportOptions.plist -exportPath "$PWD/build/export"
       - name: Upload to TestFlight
         if: ${{ inputs.upload_testflight }}
