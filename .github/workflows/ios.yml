@@ -39,8 +39,8 @@ jobs:
           security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -k "$P12_PASSWORD" build.keychain
           security list-keychain -d user -s build.keychain
-          mkdir -p ~/Library/MobileDevice/Provisioning\\ Profiles
-          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\\ Profiles/
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/"
       - name: Archive and export IPA
         if: ${{ inputs.upload_testflight }}
         env:
