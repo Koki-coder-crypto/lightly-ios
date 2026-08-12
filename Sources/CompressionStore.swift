@@ -4,16 +4,13 @@ import UIKit
 @MainActor
 final class CompressionStore: ObservableObject {
     enum Preset: String, CaseIterable, Identifiable {
-        case gentle = "きれい"
-        case balanced = "おすすめ"
-        case compact = "最小"
+        case share = "共有向け"
+        case upload = "アップロード向け"
+        case space = "容量を節約"
         var id: String { rawValue }
-        var quality: CGFloat {
-            switch self { case .gentle: 0.88; case .balanced: 0.68; case .compact: 0.42 }
-        }
-        var maximumDimension: CGFloat {
-            switch self { case .gentle: 2400; case .balanced: 1800; case .compact: 1280 }
-        }
+        var quality: CGFloat { switch self { case .share: 0.82; case .upload: 0.66; case .space: 0.48 } }
+        var maximumDimension: CGFloat { switch self { case .share: 2_048; case .upload: 1_600; case .space: 1_280 } }
+        var description: String { switch self { case .share: "メッセージやメールで送りやすいサイズ"; case .upload: "フォーム・Webアップロードに便利"; case .space: "ストレージをしっかり節約" } }
     }
 
     struct Result: Identifiable {
@@ -24,40 +21,26 @@ final class CompressionStore: ObservableObject {
         var saving: Int { max(0, originalBytes - compressedBytes) }
     }
 
-    @Published var preset: Preset = .balanced
+    @Published var preset: Preset = .share
     @Published private(set) var isProcessing = false
     @Published private(set) var results: [Result] = []
+    @Published private(set) var processedThisMonth = 0
     @Published var errorMessage: String?
 
     private let quotaKey = "lightly.freeQuota"
-    private var quotaPeriod: String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM"
-        return formatter.string(from: .now)
-    }
-
-    var freeRemaining: Int {
-        let stored = UserDefaults.standard.dictionary(forKey: quotaKey) as? [String: Int] ?? [:]
-        return max(0, 30 - (stored[quotaPeriod] ?? 0))
-    }
-
-    func canProcess(count: Int, isPro: Bool) -> Bool { isPro || count <= freeRemaining }
-
+    private let freeMonthlyLimit = 30
+    init() { processedThisMonth = UserDefaults.standard.integer(forKey: quotaKey) }
+    var freeRemaining: Int { max(0, freeMonthlyLimit - processedThisMonth) }
     var originalTotal: Int { results.reduce(0) { $0 + $1.originalBytes } }
     var compressedTotal: Int { results.reduce(0) { $0 + $1.compressedBytes } }
     var savedTotal: Int { results.reduce(0) { $0 + $1.saving } }
+    var savingsPercent: Int { guard originalTotal > 0 else { return 0 }; return Int((Double(savedTotal) / Double(originalTotal) * 100).rounded()) }
+    func canProcess(count: Int, isPro: Bool) -> Bool { isPro || count <= freeRemaining }
 
     func compress(_ data: [Data], isPro: Bool) async {
         guard !data.isEmpty else { return }
-        guard canProcess(count: data.count, isPro: isPro) else {
-            errorMessage = "無料版は月30枚までです。Proにすると無制限で軽量化できます。"
-            return
-        }
-        isProcessing = true
-        results = []
-        errorMessage = nil
+        guard canProcess(count: data.count, isPro: isPro) else { errorMessage = "無料プランの今月の処理上限に達しました。Lightly Proなら無制限に処理できます。"; return }
+        isProcessing = true; results = []; errorMessage = nil
         defer { isProcessing = false }
         do {
             let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Lightly", isDirectory: true)
@@ -72,17 +55,10 @@ final class CompressionStore: ObservableObject {
                 newResults.append(Result(url: url, originalBytes: original.count, compressedBytes: compressed.count))
             }
             results = newResults
-            if !isPro, !newResults.isEmpty {
-                var stored = UserDefaults.standard.dictionary(forKey: quotaKey) as? [String: Int] ?? [:]
-                stored[quotaPeriod, default: 0] += newResults.count
-                UserDefaults.standard.set(stored, forKey: quotaKey)
-            }
-            if newResults.isEmpty { errorMessage = "対応している画像を読み込めませんでした。" }
-        } catch {
-            errorMessage = "軽量化できませんでした。もう一度お試しください。"
-        }
+            if !isPro, !newResults.isEmpty { processedThisMonth += newResults.count; UserDefaults.standard.set(processedThisMonth, forKey: quotaKey) }
+            if newResults.isEmpty { errorMessage = "処理できる写真が選択されませんでした。別の写真を選んでください。" }
+        } catch { errorMessage = "写真を処理できませんでした。もう一度お試しください。" }
     }
-
     func reset() { results = []; errorMessage = nil }
 }
 
