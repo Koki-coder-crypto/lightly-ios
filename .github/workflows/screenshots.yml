@@ -1,0 +1,32 @@
+name: App Store Screenshots
+
+on:
+  workflow_dispatch:
+
+jobs:
+  capture:
+    runs-on: macos-26
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Build and launch Lightly in the iPhone simulator
+        run: |
+          xcodegen generate
+          xcrun simctl boot "iPhone 16e" || true
+          xcrun simctl bootstatus "iPhone 16e" -b
+          xcodebuild -project Lightly.xcodeproj -scheme Lightly -sdk iphonesimulator -configuration Release -destination 'platform=iOS Simulator,name=iPhone 16e' CODE_SIGNING_ALLOWED=NO build
+          xcrun simctl launch booted jp.egawa.lightly
+          sleep 3
+      - name: Capture App Store screenshot
+        run: |
+          mkdir -p screenshots
+          xcrun simctl io booted screenshot screenshots/Lightly-home-original.png
+          sips --resampleHeightWidth 2778 1284 screenshots/Lightly-home-original.png --out screenshots/Lightly-home.png
+          rm screenshots/Lightly-home-original.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lightly-app-store-screenshots
+          path: screenshots/Lightly-home.png
