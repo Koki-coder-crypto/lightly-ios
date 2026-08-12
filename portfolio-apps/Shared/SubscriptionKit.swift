@@ -100,7 +100,14 @@ struct SubscriptionPaywall: View {
                     Text("トライアル対象の場合、期間と終了後の更新価格は購入前にAppleが表示します。お支払いはApple IDに請求され、App Storeの設定からいつでも管理・解約できます。").font(.caption).foregroundStyle(.secondary)
                     HStack { Link("利用規約", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!); Link("プライバシー", destination: privacyURL) }.font(.caption)
                 }.padding(24)
-            }.navigationTitle("Pro").toolbar { ToolbarItem(placement: .topBarTrailing) { Button("閉じる") { dismiss() } } }
+            }
+            .navigationTitle("Pro")
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("閉じる") { dismiss() } } }
+            .alert("購入を完了できませんでした", isPresented: Binding(get: { subscription.errorMessage != nil }, set: { if !$0 { subscription.errorMessage = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(subscription.errorMessage ?? "")
+            }
         }
     }
 

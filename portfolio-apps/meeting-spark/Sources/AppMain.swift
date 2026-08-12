@@ -56,10 +56,6 @@ final class VoiceStore: NSObject, ObservableObject, AVAudioRecorderDelegate {
     }
 
     private func begin(isPro: Bool) {
-        guard isPro || FreeUsageQuota.consume(namespace: freeNamespace, limit: freeMonthlyLimit) else {
-            error = "今月の無料録音は使い切りました。Proなら無制限です。"
-            return
-        }
         do {
             try AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .spokenAudio)
             try AVAudioSession.sharedInstance().setActive(true)
@@ -67,6 +63,10 @@ final class VoiceStore: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 url: fileURL(),
                 settings: [AVFormatIDKey: Int(kAudioFormatMPEG4AAC), AVSampleRateKey: 44_100, AVNumberOfChannelsKey: 1, AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue]
             )
+            guard isPro || FreeUsageQuota.consume(namespace: freeNamespace, limit: freeMonthlyLimit) else {
+                error = "今月の無料録音は使い切りました。Proなら無制限です。"
+                return
+            }
             recorder = audioRecorder
             audioRecorder.record()
             isRecording = true

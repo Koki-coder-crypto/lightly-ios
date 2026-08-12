@@ -13,6 +13,7 @@ final class FocusStore: ObservableObject {
     @Published var selectedMinutes = 25
     @Published var remaining = 25 * 60
     @Published var isRunning = false
+    @Published private(set) var hasStartedCurrentSession = false
     @Published private(set) var sessions: [Session] = []
     @Published var error: String?
     private var timer: Timer?
@@ -26,18 +27,21 @@ final class FocusStore: ObservableObject {
     func startOrPause(isPro: Bool) { isRunning ? pause() : start(isPro: isPro) }
     func start(isPro: Bool) {
         guard !task.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        guard isPro || FreeUsageQuota.consume(namespace: freeNamespace, limit: freeMonthlyLimit) else {
-            error = "今月の無料集中セッションは使い切りました。Proなら無制限です。"
-            return
+        if !hasStartedCurrentSession {
+            guard isPro || FreeUsageQuota.consume(namespace: freeNamespace, limit: freeMonthlyLimit) else {
+                error = "今月の無料集中セッションは使い切りました。Proなら無制限です。"
+                return
+            }
+            hasStartedCurrentSession = true
         }
         isRunning = true
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in Task { @MainActor in self?.tick() } }
     }
     func pause() { isRunning = false; timer?.invalidate() }
-    func reset() { pause(); remaining = selectedMinutes * 60 }
-    func select(_ minutes: Int) { guard !isRunning else { return }; selectedMinutes = minutes; remaining = minutes * 60 }
+    func reset() { pause(); remaining = selectedMinutes * 60; hasStartedCurrentSession = false }
+    func select(_ minutes: Int) { guard !isRunning else { return }; selectedMinutes = minutes; remaining = minutes * 60; hasStartedCurrentSession = false }
     private func tick() { guard remaining > 0 else { finish(); return }; remaining -= 1 }
-    private func finish() { pause(); sessions.insert(Session(id: UUID(), task: task, minutes: selectedMinutes, completedAt: .now), at: 0); task = ""; remaining = selectedMinutes * 60; if let data = try? JSONEncoder().encode(sessions) { UserDefaults.standard.set(data, forKey: key) } }
+    private func finish() { pause(); sessions.insert(Session(id: UUID(), task: task, minutes: selectedMinutes, completedAt: .now), at: 0); task = ""; remaining = selectedMinutes * 60; hasStartedCurrentSession = false; if let data = try? JSONEncoder().encode(sessions) { UserDefaults.standard.set(data, forKey: key) } }
 }
 
 struct FocusHomeView: View {

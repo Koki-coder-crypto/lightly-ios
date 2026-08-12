@@ -23,7 +23,7 @@ final class PrintStore: ObservableObject {
     var freePDFsRemaining: Int { FreeUsageQuota.remaining(namespace: freeNamespace, limit: freeMonthlyLimit) }
     func makePDF(isPro: Bool) {
         guard !images.isEmpty else { error = "先に写真を選んでください。"; return }
-        guard isPro || FreeUsageQuota.consume(namespace: freeNamespace, limit: freeMonthlyLimit) else {
+        guard isPro || freePDFsRemaining > 0 else {
             error = "今月の無料PDFは使い切りました。Proなら無制限に作成できます。"
             return
         }
@@ -46,7 +46,11 @@ final class PrintStore: ObservableObject {
             }
         }
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("handy-print-\(UUID()).pdf")
-        do { try data.write(to: url); pdfURL = url } catch { self.error = "PDFを作成できませんでした。" }
+        do {
+            try data.write(to: url)
+            if !isPro { _ = FreeUsageQuota.consume(namespace: freeNamespace, limit: freeMonthlyLimit) }
+            pdfURL = url
+        } catch { self.error = "PDFを作成できませんでした。" }
     }
     private func aspectFit(_ image: UIImage, in rect: CGRect) -> CGRect {
         let scale = min(rect.width / image.size.width, rect.height / image.size.height)
