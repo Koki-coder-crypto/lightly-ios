@@ -1,0 +1,12 @@
+"QRを、あとで迷わず使う。" = "Keep QR codes ready when you need them.";
+"読み取ったQRに用途と期限を付けて、端末内に控えます。リンクは勝手に開きません。" = "Save a scanned QR code with a label and optional expiry. Links never open automatically.";
+"QRを読み取る" = "Scan QR code";
+"読み取り結果" = "Scan result";
+"用途・場所（例: ジムの入館）" = "Use or location (e.g. gym entry)";
+"期限を設定する" = "Set an expiry date";
+"期限" = "Expiry date";
+"控えに保存" = "Save code";
+"控え" = "Saved codes";
+"読み取ったQRはここに残ります。" = "Your scanned QR codes appear here.";
+"お知らせ" = "Notice";
+"Proで無制限のQR控えへ" = "Unlock unlimited saved QR codes";

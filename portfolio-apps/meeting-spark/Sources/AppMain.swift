@@ -159,7 +159,7 @@ struct MeetingHomeView: View {
             }
             .navigationTitle("会議前メモ")
             .sheet(isPresented: $showPaywall) {
-                SubscriptionPaywall(name: "会議前メモ", benefits: ["無制限の録音メモ", "会議名と次アクションの記録", "端末内だけで音声を保存"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/portfolio/privacy.html")!)
+                SubscriptionPaywall(name: "会議前メモ", benefits: ["無制限の録音メモ", "会議名と次アクションの記録", "端末内だけで音声を保存"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/privacy.html")!)
             }
             .alert("確認", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
                 Button("OK", role: .cancel) {}
