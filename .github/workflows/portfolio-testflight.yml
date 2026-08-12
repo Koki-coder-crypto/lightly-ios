@@ -74,7 +74,7 @@ jobs:
           xcodegen generate
           xcodebuild -project "$SCHEME.xcodeproj" -scheme "$SCHEME" -configuration Release \
             -archivePath "$PWD/build/$APP_TARGET.xcarchive" \
-            CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Distribution" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_$APPSTORE_KEY_ID.p8" \
             -authenticationKeyID "$APPSTORE_KEY_ID" -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID" archive
