@@ -8,12 +8,13 @@ targets:
   FrameDrop:
     type: application
     platform: iOS
-    sources: [Sources, ../Shared]
+    sources: [Sources, ../Shared, Assets.xcassets]
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: jp.egawa.framedrop
         INFOPLIST_KEY_CFBundleDisplayName: FrameDrop
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "選択した写真を月ごとに見直すために写真ライブラリを使用します。"
         TARGETED_DEVICE_FAMILY: "1"
