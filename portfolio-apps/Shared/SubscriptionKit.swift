@@ -85,7 +85,7 @@ struct SubscriptionPaywall: View {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 10) {
                         Image(systemName: "sparkles").font(.system(size: 36)).foregroundStyle(.orange)
-                        Text("Private by design").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                        Text("プライバシーを最優先").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
                     }
                     Text("\(name) Pro").font(.system(.largeTitle, design: .rounded, weight: .bold))
                     ForEach(benefits, id: \.self) { Label($0, systemImage: "checkmark.circle.fill").foregroundStyle(.primary) }
@@ -100,7 +100,7 @@ struct SubscriptionPaywall: View {
                             .buttonStyle(.borderedProminent)
                             .tint(product.id == subscription.yearlyID ? .blue : .gray)
                             .disabled(subscription.isLoading)
-                            .accessibilityHint(product.id == subscription.yearlyID ? "Recommended annual plan" : "Monthly subscription plan")
+                            .accessibilityHint(product.id == subscription.yearlyID ? "おすすめの年間プラン" : "月額サブスクリプション")
                         }
                     }
                     Button("購入を復元") { Task { await subscription.restore() } }.frame(maxWidth: .infinity)

@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "Photo Cleaner";
+"NSPhotoLibraryUsageDescription" = "Photo Cleaner uses your photo library to review screenshots, long videos, and recent large photos on this device.";
+"NSPhotoLibraryAddUsageDescription" = "Photo Cleaner uses this access only to move the items you select and confirm to Recently Deleted in Photos.";

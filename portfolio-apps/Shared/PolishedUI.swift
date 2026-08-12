@@ -9,7 +9,7 @@ struct UsageAllowanceCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label("Free allowance", systemImage: "chart.bar.fill")
+                Label("無料枠", systemImage: "chart.bar.fill")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 Text("\(remaining) / \(limit)")
@@ -39,6 +39,6 @@ struct PrimaryActionButton: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .accessibilityHint("Starts the primary action for this screen")
+        .accessibilityHint("この画面の主な操作を開始します")
     }
 }
