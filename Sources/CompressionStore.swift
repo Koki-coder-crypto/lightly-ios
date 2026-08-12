@@ -28,8 +28,17 @@ final class CompressionStore: ObservableObject {
     @Published var errorMessage: String?
 
     private let quotaKey = "lightly.freeQuota"
+    private let quotaMonthKey = "lightly.freeQuota.month"
     private let freeMonthlyLimit = 30
-    init() { processedThisMonth = UserDefaults.standard.integer(forKey: quotaKey) }
+    init() {
+        let defaults = UserDefaults.standard
+        let currentMonth = Self.currentMonthKey()
+        if defaults.string(forKey: quotaMonthKey) != currentMonth {
+            defaults.set(0, forKey: quotaKey)
+            defaults.set(currentMonth, forKey: quotaMonthKey)
+        }
+        processedThisMonth = defaults.integer(forKey: quotaKey)
+    }
     var freeRemaining: Int { max(0, freeMonthlyLimit - processedThisMonth) }
     var originalTotal: Int { results.reduce(0) { $0 + $1.originalBytes } }
     var compressedTotal: Int { results.reduce(0) { $0 + $1.compressedBytes } }
@@ -55,11 +64,23 @@ final class CompressionStore: ObservableObject {
                 newResults.append(Result(url: url, originalBytes: original.count, compressedBytes: compressed.count))
             }
             results = newResults
-            if !isPro, !newResults.isEmpty { processedThisMonth += newResults.count; UserDefaults.standard.set(processedThisMonth, forKey: quotaKey) }
+            if !isPro, !newResults.isEmpty {
+                processedThisMonth += newResults.count
+                UserDefaults.standard.set(processedThisMonth, forKey: quotaKey)
+                UserDefaults.standard.set(Self.currentMonthKey(), forKey: quotaMonthKey)
+            }
             if newResults.isEmpty { errorMessage = "処理できる写真が選択されませんでした。別の写真を選んでください。" }
         } catch { errorMessage = "写真を処理できませんでした。もう一度お試しください。" }
     }
     func reset() { results = []; errorMessage = nil }
+
+    private static func currentMonthKey() -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM"
+        return formatter.string(from: Date())
+    }
 }
 
 private extension UIImage {

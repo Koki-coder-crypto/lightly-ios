@@ -1,0 +1,36 @@
+name: Portfolio iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Build target"
+        type: choice
+        required: true
+        default: focus-pocket
+        options: [frame-drop, qr-keeper, handy-print, meeting-spark, focus-pocket]
+      upload_testflight:
+        description: "Upload the selected app to TestFlight"
+        type: boolean
+        required: true
+        default: false
+
+jobs:
+  build:
+    runs-on: macos-26
+    defaults:
+      run:
+        working-directory: portfolio-apps/${{ inputs.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - run: xcodebuild -list
+      - name: Build unsigned app
+        if: ${{ !inputs.upload_testflight }}
+        run: xcodebuild -scheme "$(xcodebuild -list -json | plutil -extract project.schemes.0 raw -)" -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
+      - name: Upload prerequisites
+        if: ${{ inputs.upload_testflight }}
+        run: |
+          echo "TestFlight upload requires a distinct distribution profile for this Bundle ID. Configure the selected app's certificate, profile, Apple Team ID, and App Store Connect API key as GitHub Actions secrets before enabling this step."
+          exit 1

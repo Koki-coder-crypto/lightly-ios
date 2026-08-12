@@ -1,0 +1,60 @@
+import AVFoundation
+import SwiftUI
+
+@main
+struct MeetingSparkApp: App {
+    @StateObject private var subscription = SubscriptionManager(monthlyID: "jp.egawa.meetingspark.pro.monthly", yearlyID: "jp.egawa.meetingspark.pro.yearly")
+    var body: some Scene { WindowGroup { MeetingHomeView().environmentObject(subscription) } }
+}
+
+@MainActor
+final class VoiceStore: NSObject, ObservableObject, AVAudioRecorderDelegate {
+    struct Memo: Identifiable, Codable { let id: UUID; let title: String; let action: String; let fileName: String; let duration: TimeInterval; let createdAt: Date }
+    @Published var title = ""
+    @Published var nextAction = ""
+    @Published private(set) var isRecording = false
+    @Published private(set) var elapsed: TimeInterval = 0
+    @Published private(set) var memos: [Memo] = []
+    @Published var error: String?
+    private var recorder: AVAudioRecorder?
+    private var player: AVAudioPlayer?
+    private var timer: Timer?
+    private let key = "jp.egawa.meetingspark.memos"
+    override init() { super.init(); memos = (try? JSONDecoder().decode([Memo].self, from: UserDefaults.standard.data(forKey: key) ?? Data())) ?? [] }
+    func toggleRecording() { isRecording ? stopRecording() : startRecording() }
+    func startRecording() {
+        guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { error = "会議名を入力してください。"; return }
+        AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in Task { @MainActor in if granted { self?.begin() } else { self?.error = "マイクの許可が必要です。" } } }
+    }
+    private func begin() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .spokenAudio)
+            try AVAudioSession.sharedInstance().setActive(true)
+            let url = fileURL()
+            recorder = try AVAudioRecorder(url: url, settings: [AVFormatIDKey: Int(kAudioFormatMPEG4AAC), AVSampleRateKey: 44_100, AVNumberOfChannelsKey: 1, AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue])
+            recorder?.record(); isRecording = true; elapsed = 0
+            timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in Task { @MainActor in self?.elapsed += 1 } }
+        } catch { self.error = "録音を開始できませんでした。" }
+    }
+    func stopRecording() {
+        guard let recorder else { return }; recorder.stop(); timer?.invalidate(); isRecording = false
+        let memo = Memo(id: UUID(), title: title, action: nextAction, fileName: recorder.url.lastPathComponent, duration: elapsed, createdAt: .now)
+        memos.insert(memo, at: 0); title = ""; nextAction = ""; persist()
+    }
+    func play(_ memo: Memo) { player?.stop(); player = try? AVAudioPlayer(contentsOf: directory.appendingPathComponent(memo.fileName)); player?.play() }
+    private var directory: URL { let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("MeetingMemos", isDirectory: true); try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true); return url }
+    private func fileURL() -> URL { directory.appendingPathComponent("memo-\(UUID()).m4a") }
+    private func persist() { if let data = try? JSONEncoder().encode(memos) { UserDefaults.standard.set(data, forKey: key) } }
+}
+
+struct MeetingHomeView: View {
+    @StateObject private var store = VoiceStore()
+    @EnvironmentObject private var subscription: SubscriptionManager
+    @State private var showPaywall = false
+    var body: some View { NavigationStack { List {
+        Section { VStack(alignment: .leading, spacing: 8) { Label("会議の前に、30秒だけ。", systemImage: "mic.fill").font(.system(.title3, design: .rounded, weight: .bold)); Text("考えと次の行動を一緒に残す、端末内の音声メモです。").font(.subheadline).foregroundStyle(.secondary) } }
+        Section(store.isRecording ? "録音中" : "新しいメモ") { TextField("会議名", text: $store.title).disabled(store.isRecording); TextField("次の行動（任意）", text: $store.nextAction).disabled(store.isRecording); HStack { Text("\(Int(store.elapsed / 60)):\(String(format: "%02d", Int(store.elapsed) % 60))").monospacedDigit(); Spacer(); Button { store.toggleRecording() } label: { Label(store.isRecording ? "録音を止める" : "録音を始める", systemImage: store.isRecording ? "stop.circle.fill" : "record.circle") }.buttonStyle(.borderedProminent).tint(store.isRecording ? .red : .blue) } }
+        Section("最近のメモ") { if store.memos.isEmpty { Text("録音したメモはここで聞き返せます。").foregroundStyle(.secondary) }; ForEach(store.memos) { memo in HStack { Button { store.play(memo) } label: { Image(systemName: "play.circle.fill").font(.title2) }; VStack(alignment: .leading, spacing: 3) { Text(memo.title).font(.headline); if !memo.action.isEmpty { Text("次: \(memo.action)").font(.subheadline).foregroundStyle(.secondary) }; Text("\(Int(memo.duration))秒 · \(memo.createdAt.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.tertiary) }; Spacer() } } }
+        if !subscription.isPro { Section { Button("Proで無制限の録音と週次レビューへ") { showPaywall = true } } }
+    }.navigationTitle("会議前メモ").sheet(isPresented: $showPaywall) { SubscriptionPaywall(name: "会議前メモ", benefits: ["無制限の音声メモ", "会議別フォルダ", "週次レビュー"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/portfolio/privacy.html")!) }.alert("お知らせ", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(store.error ?? "") } } } }
+}

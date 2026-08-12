@@ -15,7 +15,11 @@ final class PurchaseManager: ObservableObject {
     deinit { updateTask?.cancel() }
 
     func refresh() async {
-        do { products = try await Product.products(for: [Self.monthlyID, Self.yearlyID]).sorted { $0.price < $1.price } }
+        do {
+            products = try await Product.products(for: [Self.monthlyID, Self.yearlyID]).sorted {
+                ($0.id == Self.yearlyID ? 0 : 1) < ($1.id == Self.yearlyID ? 0 : 1)
+            }
+        }
         catch { products = [] }
         await refreshEntitlements()
     }

@@ -81,15 +81,31 @@ private struct PaywallView: View {
         NavigationStack { ScrollView { VStack(alignment: .leading, spacing: 22) {
             Image(systemName: "sparkles").font(.system(size: 38)).foregroundStyle(.orange)
             Text("もっと自由に、まとめて軽く。\nLightly Pro").font(.system(.largeTitle, design: .rounded, weight: .bold))
-            VStack(alignment: .leading, spacing: 13) { Label("写真を無制限に一括処理", systemImage: "infinity"); Label("最大30枚をまとめて選択", systemImage: "rectangle.stack"); Label("広告なし・端末内処理", systemImage: "hand.raised") }
+            VStack(alignment: .leading, spacing: 13) { Label("写真を無制限に一括処理", systemImage: "infinity"); Label("3種類の仕上がりプリセット", systemImage: "slider.horizontal.3"); Label("広告なし・端末内処理", systemImage: "hand.raised") }
             if purchaseManager.products.isEmpty { ProgressView("プランを読み込み中…").frame(maxWidth: .infinity).padding() } else {
                 ForEach(purchaseManager.products, id: \.id) { product in
-                    Button { Task { await purchaseManager.purchase(product) } } label: { HStack { VStack(alignment: .leading) { Text(product.displayName).font(.headline); Text(product.description).font(.footnote).foregroundStyle(.secondary) }; Spacer(); Text(product.displayPrice).font(.headline) }.frame(maxWidth: .infinity, alignment: .leading).padding(16) }.buttonStyle(.borderedProminent).tint(.blue).disabled(purchaseManager.isLoading)
+                    Button { Task { await purchaseManager.purchase(product) } } label: { HStack { VStack(alignment: .leading, spacing: 4) { Text(product.displayName).font(.headline); Text(subscriptionDetail(for: product)).font(.footnote).foregroundStyle(.secondary) }; Spacer(); Text(product.displayPrice).font(.headline) }.frame(maxWidth: .infinity, alignment: .leading).padding(16) }.buttonStyle(.borderedProminent).tint(product.id == PurchaseManager.yearlyID ? .blue : .gray).disabled(purchaseManager.isLoading)
                 }
             }
             Button("購入を復元") { Task { await purchaseManager.restore() } }.frame(maxWidth: .infinity).font(.footnote)
-            Text("お支払いはApple IDに請求されます。サブスクリプションはApp Storeのアカウント設定からいつでも管理・解約できます。").font(.caption).foregroundStyle(.secondary)
+            Text("無料トライアルの対象者には、期間と終了後の更新価格を購入前に表示します。お支払いはApple IDに請求され、サブスクリプションはApp Storeのアカウント設定からいつでも管理・解約できます。").font(.caption).foregroundStyle(.secondary)
+            Link("利用規約", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!).font(.caption)
+            Link("プライバシーポリシー", destination: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/privacy.html")!).font(.caption)
         }.padding(24) }.navigationTitle("Lightly Pro").toolbar { ToolbarItem(placement: .topBarTrailing) { Button("閉じる") { dismiss() } } } }
+    }
+
+    private func subscriptionDetail(for product: Product) -> String {
+        if let offer = product.subscription?.introductoryOffer {
+            let period = offer.period
+            return "\(period.value) \(period.unit.localizedDescription)無料トライアル後 \(product.displayPrice)/\(product.subscription?.subscriptionPeriod.unit.localizedDescription ?? "期間")"
+        }
+        return product.description
+    }
+}
+
+private extension Product.SubscriptionPeriod.Unit {
+    var localizedDescription: String {
+        switch self { case .day: "日"; case .week: "週"; case .month: "月"; case .year: "年"; @unknown default: "期間" }
     }
 }
 
