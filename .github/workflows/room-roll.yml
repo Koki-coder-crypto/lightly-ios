@@ -26,35 +26,116 @@ jobs:
       - name: Build without signing
         if: ${{ !inputs.upload_testflight }}
         run: xcodebuild -project RoomRoll.xcodeproj -scheme RoomRoll -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
-      - name: Import distribution certificate and App Store profile
+      - name: Import distribution certificate
         if: ${{ inputs.upload_testflight }}
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          ROOMROLL_PROFILE_BASE64: ${{ secrets.ROOMROLL_PROFILE_BASE64 }}
         run: |
           set -euo pipefail
-          test -n "$ROOMROLL_PROFILE_BASE64" || { echo "Missing ROOMROLL_PROFILE_BASE64 secret."; exit 1; }
           echo "$BUILD_CERTIFICATE_BASE64" | base64 -D > certificate.p12
-          echo "$ROOMROLL_PROFILE_BASE64" | base64 -D > profile.mobileprovision
           security create-keychain -p "$P12_PASSWORD" build.keychain
           security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -k "$P12_PASSWORD" build.keychain
           security list-keychain -d user -s build.keychain
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          security find-certificate -p -c "Apple Distribution" build.keychain > distribution.pem
+          CERT_SERIAL="$(openssl x509 -in distribution.pem -noout -serial | cut -d= -f2)"
+          test -n "$CERT_SERIAL"
+          echo "ROOMROLL_CERT_SERIAL=$CERT_SERIAL" >> "$GITHUB_ENV"
+      - name: Create RoomRoll App ID and App Store profile
+        if: ${{ inputs.upload_testflight }}
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/appstoreconnect" "$HOME/Library/MobileDevice/Provisioning Profiles"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$RUNNER_TEMP/appstoreconnect/AuthKey_$APPSTORE_KEY_ID.p8"
+          export ROOMROLL_KEY_PATH="$RUNNER_TEMP/appstoreconnect/AuthKey_$APPSTORE_KEY_ID.p8"
+          export ROOMROLL_PROFILE_NAME="RoomRoll AppStore CI $GITHUB_RUN_ID"
+          ruby <<'RUBY'
+          require "base64"
+          require "json"
+          require "net/http"
+          require "openssl"
+          require "uri"
+
+          def b64url(value)
+            Base64.urlsafe_encode64(value, padding: false)
+          end
+
+          def token
+            header = b64url(JSON.generate({alg: "ES256", kid: ENV.fetch("APPSTORE_KEY_ID")}))
+            payload = b64url(JSON.generate({iss: ENV.fetch("APPSTORE_ISSUER_ID"), iat: Time.now.to_i, exp: Time.now.to_i + 1_100, aud: "appstoreconnect-v1"}))
+            key = OpenSSL::PKey.read(File.read(ENV.fetch("ROOMROLL_KEY_PATH")))
+            der = key.dsa_sign_asn1(OpenSSL::Digest::SHA256.digest("#{header}.#{payload}"))
+            sequence = OpenSSL::ASN1.decode(der)
+            raw = sequence.value.map { |number| number.value.to_s(2).rjust(32, "\0") }.join
+            "#{header}.#{payload}.#{b64url(raw)}"
+          end
+
+          def request(method, path, body = nil)
+            uri = URI("https://api.appstoreconnect.apple.com#{path}")
+            req = Net::HTTP.const_get(method.capitalize).new(uri)
+            req["Authorization"] = "Bearer #{token}"
+            req["Content-Type"] = "application/json"
+            req.body = JSON.generate(body) if body
+            response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |http| http.request(req) }
+            return JSON.parse(response.body) if response.code.to_i.between?(200, 299)
+            message = JSON.parse(response.body).fetch("errors", []).map { |e| e["detail"] || e["title"] }.join("; ") rescue response.body
+            abort("Apple Developer API #{method.upcase} #{path} failed (#{response.code}): #{message}")
+          end
+
+          bundle = request("get", "/v1/bundleIds?filter%5Bidentifier%5D=jp.egawa.roomroll&limit=1").fetch("data").first
+          unless bundle
+            bundle = request("post", "/v1/bundleIds", {data: {type: "bundleIds", attributes: {identifier: "jp.egawa.roomroll", name: "Photo Cleaner", platform: "IOS"}}}).fetch("data")
+          end
+
+          expected_serial = ENV.fetch("ROOMROLL_CERT_SERIAL").delete(":").upcase
+          certificates = request("get", "/v1/certificates?filter%5BcertificateType%5D=DISTRIBUTION&limit=200").fetch("data")
+          certificate = certificates.find { |item| item.dig("attributes", "serialNumber").to_s.delete(":").upcase == expected_serial }
+          abort("The imported Apple Distribution certificate is not available through the Apple Developer API.") unless certificate
+
+          profile = request("post", "/v1/profiles", {
+            data: {
+              type: "profiles",
+              attributes: {name: ENV.fetch("ROOMROLL_PROFILE_NAME"), profileType: "IOS_APP_STORE"},
+              relationships: {
+                bundleId: {data: {type: "bundleIds", id: bundle.fetch("id")}},
+                certificates: {
+                  data: [{type: "certificates", id: certificate.fetch("id")}]
+                }
+              }
+            }
+          }).fetch("data")
+          content = profile.dig("attributes", "profileContent")
+          abort("Apple Developer API returned no provisioning profile content.") if content.to_s.empty?
+          File.binwrite("profile.mobileprovision", Base64.decode64(content))
+          RUBY
+          test -s profile.mobileprovision
           cp profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/"
+          echo "ROOMROLL_PROFILE_NAME=$ROOMROLL_PROFILE_NAME" >> "$GITHUB_ENV"
       - name: Archive and export IPA
         if: ${{ inputs.upload_testflight }}
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          ROOMROLL_PROFILE_NAME: ${{ secrets.ROOMROLL_PROFILE_NAME }}
         run: |
           set -euo pipefail
-          test -n "$ROOMROLL_PROFILE_NAME" || { echo "Missing ROOMROLL_PROFILE_NAME secret."; exit 1; }
           xcodebuild -project RoomRoll.xcodeproj -scheme RoomRoll -configuration Release -destination 'generic/platform=iOS' -archivePath "$PWD/build/RoomRoll.xcarchive" \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             PROVISIONING_PROFILE_SPECIFIER="$ROOMROLL_PROFILE_NAME" archive
-          xcodebuild -exportArchive -archivePath "$PWD/build/RoomRoll.xcarchive" -exportOptionsPlist ../../ci/RoomRollExportOptions.plist -exportPath "$PWD/build/export"
+          cat > "$PWD/build/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key><dict><key>jp.egawa.roomroll</key><string>$ROOMROLL_PROFILE_NAME</string></dict>
+            <key>stripSwiftSymbols</key><true/><key>uploadSymbols</key><true/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$PWD/build/RoomRoll.xcarchive" -exportOptionsPlist "$PWD/build/ExportOptions.plist" -exportPath "$PWD/build/export"
       - name: Upload to TestFlight
         if: ${{ inputs.upload_testflight }}
         env:
