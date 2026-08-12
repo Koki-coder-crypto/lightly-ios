@@ -1,0 +1,77 @@
+name: Portfolio TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: App to archive and upload
+        required: true
+        type: choice
+        options: [frame-drop, qr-keeper, handy-print, meeting-spark, focus-pocket]
+
+jobs:
+  upload:
+    runs-on: macos-26
+    permissions:
+      contents: read
+    env:
+      APP_TARGET: ${{ inputs.app }}
+      BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+      APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+      APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+      FRAMEDROP_PROFILE_BASE64: ${{ secrets.FRAMEDROP_PROFILE_BASE64 }}
+      FRAMEDROP_PROFILE_NAME: ${{ secrets.FRAMEDROP_PROFILE_NAME }}
+      QRKEEPER_PROFILE_BASE64: ${{ secrets.QRKEEPER_PROFILE_BASE64 }}
+      QRKEEPER_PROFILE_NAME: ${{ secrets.QRKEEPER_PROFILE_NAME }}
+      HANDYPRINT_PROFILE_BASE64: ${{ secrets.HANDYPRINT_PROFILE_BASE64 }}
+      HANDYPRINT_PROFILE_NAME: ${{ secrets.HANDYPRINT_PROFILE_NAME }}
+      MEETINGSPARK_PROFILE_BASE64: ${{ secrets.MEETINGSPARK_PROFILE_BASE64 }}
+      MEETINGSPARK_PROFILE_NAME: ${{ secrets.MEETINGSPARK_PROFILE_NAME }}
+      FOCUSPOCKET_PROFILE_BASE64: ${{ secrets.FOCUSPOCKET_PROFILE_BASE64 }}
+      FOCUSPOCKET_PROFILE_NAME: ${{ secrets.FOCUSPOCKET_PROFILE_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - name: Select app and signing profile
+        shell: bash
+        run: |
+          case "$APP_TARGET" in
+            frame-drop) APP_DIR=frame-drop; SCHEME=FrameDrop; PROFILE_BASE64="$FRAMEDROP_PROFILE_BASE64"; PROFILE_NAME="$FRAMEDROP_PROFILE_NAME" ;;
+            qr-keeper) APP_DIR=qr-keeper; SCHEME='QR控え帳'; PROFILE_BASE64="$QRKEEPER_PROFILE_BASE64"; PROFILE_NAME="$QRKEEPER_PROFILE_NAME" ;;
+            handy-print) APP_DIR=handy-print; SCHEME='手渡しプリント'; PROFILE_BASE64="$HANDYPRINT_PROFILE_BASE64"; PROFILE_NAME="$HANDYPRINT_PROFILE_NAME" ;;
+            meeting-spark) APP_DIR=meeting-spark; SCHEME='会議前メモ'; PROFILE_BASE64="$MEETINGSPARK_PROFILE_BASE64"; PROFILE_NAME="$MEETINGSPARK_PROFILE_NAME" ;;
+            focus-pocket) APP_DIR=focus-pocket; SCHEME='集中ポケット'; PROFILE_BASE64="$FOCUSPOCKET_PROFILE_BASE64"; PROFILE_NAME="$FOCUSPOCKET_PROFILE_NAME" ;;
+            *) echo "Unknown app: $APP_TARGET"; exit 1 ;;
+          esac
+          test -n "$PROFILE_BASE64" && test -n "$PROFILE_NAME" || { echo "Signing profile secrets are missing for $APP_TARGET"; exit 1; }
+          echo "APP_DIR=$APP_DIR" >> "$GITHUB_ENV"
+          echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
+          echo "PROFILE_BASE64=$PROFILE_BASE64" >> "$GITHUB_ENV"
+          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+      - name: Import distribution certificate and provisioning profile
+        shell: bash
+        run: |
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 -D > certificate.p12
+          echo "$PROFILE_BASE64" | base64 -D > profile.mobileprovision
+          security create-keychain -p "$P12_PASSWORD" build.keychain
+          security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -k "$P12_PASSWORD" build.keychain
+          security list-keychain -d user -s build.keychain
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/"
+      - name: Archive and export IPA
+        shell: bash
+        run: |
+          cd "portfolio-apps/$APP_DIR"
+          xcodegen generate
+          xcodebuild -project "$SCHEME.xcodeproj" -scheme "$SCHEME" -configuration Release -archivePath "$PWD/build/$APP_TARGET.xcarchive" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" archive
+          xcodebuild -exportArchive -archivePath "$PWD/build/$APP_TARGET.xcarchive" -exportOptionsPlist "../../ci/ExportOptions.plist" -exportPath "$PWD/build/export"
+      - name: Upload to TestFlight
+        shell: bash
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_$APPSTORE_KEY_ID.p8
+          xcrun altool --upload-app --type ios --file "portfolio-apps/$APP_DIR/build/export/$SCHEME.ipa" --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID"
