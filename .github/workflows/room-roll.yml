@@ -92,6 +92,12 @@ jobs:
             bundle = request("post", "/v1/bundleIds", {data: {type: "bundleIds", attributes: {identifier: "jp.egawa.roomroll", name: "Photo Cleaner", platform: "IOS"}}}).fetch("data")
           end
 
+          apps = request("get", "/v1/apps?filter%5BbundleId%5D=jp.egawa.roomroll&limit=1").fetch("data")
+          if apps.empty?
+            request("post", "/v1/apps", {data: {type: "apps", attributes: {bundleId: "jp.egawa.roomroll", name: "Photo Cleaner: Review & Remove", primaryLocale: "en-US", sku: "roomroll-ios-001"}}})
+            sleep 10
+          end
+
           expected_serial = ENV.fetch("ROOMROLL_CERT_SERIAL").delete(":").upcase
           certificates = request("get", "/v1/certificates?filter%5BcertificateType%5D=DISTRIBUTION&limit=200").fetch("data")
           certificate = certificates.find { |item| item.dig("attributes", "serialNumber").to_s.delete(":").upcase == expected_serial }
