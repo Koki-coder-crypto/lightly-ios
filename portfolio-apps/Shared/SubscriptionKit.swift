@@ -83,7 +83,10 @@ struct SubscriptionPaywall: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Image(systemName: "sparkles").font(.system(size: 36)).foregroundStyle(.orange)
+                        Text("Private by design").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                    }
                     Text("\(name) Pro").font(.system(.largeTitle, design: .rounded, weight: .bold))
                     ForEach(benefits, id: \.self) { Label($0, systemImage: "checkmark.circle.fill").foregroundStyle(.primary) }
                     if subscription.products.isEmpty {
@@ -93,13 +96,20 @@ struct SubscriptionPaywall: View {
                             Button { Task { await subscription.purchase(product) } } label: {
                                 HStack { VStack(alignment: .leading, spacing: 4) { Text(product.displayName).font(.headline); Text(detail(product)).font(.caption).foregroundStyle(.secondary) }; Spacer(); Text(product.displayPrice).font(.headline) }
                                     .frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                            }.buttonStyle(.borderedProminent).tint(product.id == subscription.yearlyID ? .blue : .gray).disabled(subscription.isLoading)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(product.id == subscription.yearlyID ? .blue : .gray)
+                            .disabled(subscription.isLoading)
+                            .accessibilityHint(product.id == subscription.yearlyID ? "Recommended annual plan" : "Monthly subscription plan")
                         }
                     }
                     Button("購入を復元") { Task { await subscription.restore() } }.frame(maxWidth: .infinity)
                     Text("トライアル対象の場合、期間と終了後の更新価格は購入前にAppleが表示します。お支払いはApple IDに請求され、App Storeの設定からいつでも管理・解約できます。").font(.caption).foregroundStyle(.secondary)
                     HStack { Link("利用規約", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!); Link("プライバシー", destination: privacyURL) }.font(.caption)
-                }.padding(24)
+                }
+                .padding(24)
+                .frame(maxWidth: 640, alignment: .leading)
+                .background(Color(uiColor: .systemGroupedBackground))
             }
             .navigationTitle("Pro")
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("閉じる") { dismiss() } } }
