@@ -1,25 +1,19 @@
-# 提出可否 — 2026-08-12
+# Caliqo Submission Readiness
 
-## Lightly
+Repository work complete:
 
-**状態: TestFlight送信の自動化は構成済み、App Store審査提出は未実行。**
+- Original product name, visual identity, app icon, and UI
+- Camera-use purpose string
+- Local-only privacy design and support/privacy pages
+- Store metadata and App Review notes
+- XcodeGen project and TestFlight CI configuration renamed for Caliqo
 
-- 買い切り商品はなく、月額・年額の自動更新サブスクリプションIDだけを参照する。
-- GitHub Actionsには、署名済みIPAをTestFlightへ送るワークフローがある。
-- 実行に必要なApple署名証明書、Provisioning Profile、App Store Connect APIキーはこの実行環境に存在しない。
-- 審査提出の前に、実機/Sandboxで「無料枠・トライアル・購入・復元・解約後のアクセス」を確認し、App Store Connectで商品とメタデータを作成する。
+Account-owner actions still required:
 
-## 5アプリ（再設計版）
+1. Register `jp.egawa.caliqo` in App Store Connect (suggested SKU: `caliqo-ios-001`).
+2. Provide a Developer Team/provisioning profile and archive from a Mac, or add the Caliqo signing secrets to GitHub Actions.
+3. Test on a physical iPhone: permission, AR distance, AR area, level, save/delete history, VoiceOver, and Dynamic Type.
+4. Upload the required 6.9-inch iPhone screenshots; set App Privacy to Data Not Collected; enter the published support and privacy URLs.
+5. Distribute through TestFlight and submit for review.
 
-**状態: 調査・設計完了、開発・提出は未完了。**
-
-提出候補は [FIVE_APP_PORTFOLIO.md](FIVE_APP_PORTFOLIO.md) に限定する。旧10本は、個別のBundle IDとStoreKit商品IDは持つが、同じ汎用のローカル記録UIを名前だけ変えたものなので提出しない。
-
-提出対象に昇格するには、各アプリで以下を完了する。
-
-1. 固有の中核機能を実装する（写真の選別/途中再開、実QR読取、PDF生成、録音、集中タイマー）。
-2. 各機能の無料枠、Pro継続価値、プライバシー説明を実装と一致させる。
-3. 個別のストア文言、スクリーンショット、サポート・プライバシーURL、審査用デモ手順を作る。
-4. 実機/Sandbox/TestFlightで、購入・復元・解約を含むテストを通す。
-
-月10万円は目標として追うが、審査通過・獲得・転換・継続の実測なしに保証できない。まずLightlyで、インストール→初回圧縮→ペイウォール表示→トライアル開始→有料転換→更新の数字を計測し、勝ち筋を1本ずつ横展開する。
+Only the Apple-account-holder can sign the archive, upload it, and press Submit for Review.

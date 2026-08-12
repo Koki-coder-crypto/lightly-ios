@@ -5,7 +5,7 @@
   <key>signingStyle</key><string>manual</string>
   <key>provisioningProfiles</key>
   <dict>
-    <key>jp.egawa.lightly</key><string>Lightly AppStore CI</string>
+    <key>jp.egawa.caliqo</key><string>Caliqo AppStore CI</string>
   </dict>
   <key>stripSwiftSymbols</key><true/>
   <key>uploadSymbols</key><true/>

@@ -1,4 +1,4 @@
-name: iOS
+name: Caliqo iOS
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       upload_testflight:
-        description: "TestFlightへ送信する"
+        description: "Upload the signed archive to TestFlight"
         required: true
         default: false
         type: boolean
@@ -21,12 +21,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
         run: brew install xcodegen
-      - name: Generate Xcode project
+      - name: Generate project
         run: xcodegen generate
       - name: Build without signing
         if: ${{ !inputs.upload_testflight }}
-        run: xcodebuild -project Lightly.xcodeproj -scheme Lightly -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
-      - name: Import signing certificate and provisioning profile
+        run: xcodebuild -project Caliqo.xcodeproj -scheme Caliqo -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
+      - name: Import signing certificate and profile
         if: ${{ inputs.upload_testflight }}
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
@@ -47,8 +47,8 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           PROFILE_NAME: ${{ secrets.PROFILE_NAME }}
         run: |
-          xcodebuild -project Lightly.xcodeproj -scheme Lightly -configuration Release -archivePath "$PWD/build/Lightly.xcarchive" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" archive
-          xcodebuild -exportArchive -archivePath "$PWD/build/Lightly.xcarchive" -exportOptionsPlist ci/ExportOptions.plist -exportPath "$PWD/build/export"
+          xcodebuild -project Caliqo.xcodeproj -scheme Caliqo -configuration Release -archivePath "$PWD/build/Caliqo.xcarchive" CURRENT_PROJECT_VERSION="${{ github.run_number }}" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" archive
+          xcodebuild -exportArchive -archivePath "$PWD/build/Caliqo.xcarchive" -exportOptionsPlist ci/ExportOptions.plist -exportPath "$PWD/build/export"
       - name: Upload to TestFlight
         if: ${{ inputs.upload_testflight }}
         env:
@@ -58,4 +58,4 @@ jobs:
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_$APPSTORE_KEY_ID.p8
-          xcrun altool --upload-app --type ios --file "$PWD/build/export/Lightly.ipa" --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID"
+          xcrun altool --upload-app --type ios --file "$PWD/build/export/Caliqo.ipa" --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID"

@@ -1,30 +1,19 @@
-# Lightly — App Store掲載原稿
+# App Store Listing: Caliqo
 
-## サブタイトル
-写真を軽く、共有をもっと速く
+Name: Caliqo: AR Measure and Level
 
-## プロモーション用テキスト
-写真を軽く、共有をもっと速く。端末内だけで安全に圧縮できます。
+Subtitle: Check distance, area, and alignment
 
-## 概要
-Lightlyは、写真の見た目を保ちながらファイルサイズを小さくする写真圧縮アプリです。
+Promotional text: Measure everyday spaces quickly, without ads or an account.
 
-- 共有・アップロード・容量節約の3つの仕上がり
-- 最大30枚をまとめて処理
-- 圧縮前後の容量と削減率をすぐに確認
-- 圧縮した写真をそのまま保存・共有
-- 写真は端末内で処理。サーバーにアップロードしません
+Description: Caliqo combines AR distance and area measurement, a digital level, a user-calibrated screen ruler, room estimate, and private local history in one iPhone utility. Measurements can be named, edited, shared, and deleted. Records stay on the device. There are no ads, accounts, analytics, or tracking SDKs. AR results can include error; verify important dimensions with a physical measuring tool.
 
-メール添付、Webフォーム、メッセージ、ストレージ整理に。写真を選ぶだけで、用途に合う軽さへ整えられます。
+Keywords: AR measure,ruler,tape measure,level,distance,area,room,DIY,furniture
 
-## キーワード
-写真圧縮,画像圧縮,容量削減,リサイズ,写真,画像,ファイルサイズ,共有
+Review notes: Camera access is used only for ARKit surface and distance detection. Camera images are not saved or sent off-device. Measurement names, values, notes, and dates are saved locally with UserDefaults. Sharing is initiated only by the user through the system share sheet. The app has no login, purchases, ads, external SDKs, or network calls.
 
-## サポートURL
-https://koki-coder-crypto.github.io/lightly-ios/support.html
+Support URL: https://koki-coder-crypto.github.io/lightly-ios/support.html
 
-## マーケティングURL
-https://koki-coder-crypto.github.io/lightly-ios/
+Privacy Policy URL: https://koki-coder-crypto.github.io/lightly-ios/privacy.html
 
-## App Reviewメモ
-サインインは不要です。写真はユーザーが選択したものだけを端末内で処理します。アプリ運営者のサーバーへ写真・個人情報を送信、保存、共有しません。課金はApple StoreKitを使用する自動更新サブスクリプションです。
+Screenshots: Capture the Home privacy promise, AR distance measurement, AR area measurement, Level, and History on a 6.9-inch iPhone. App Store Connect accepts one to ten screenshots; use opaque PNG or JPEG files only.
