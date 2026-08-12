@@ -2,41 +2,18 @@ name: Portfolio TestFlight
 
 on:
   workflow_dispatch:
-  push:
-    branches: [master]
-    paths:
-      - 'release/portfolio-upload.trigger'
+  repository_dispatch:
+    types: [portfolio-testflight-upload]
 
 jobs:
   upload:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - app: frame-drop
-            directory: frame-drop
-            scheme: FrameDrop
-            bundle_id: jp.egawa.framedrop
-          - app: qr-keeper
-            directory: qr-keeper
-            scheme: QR控え帳
-            bundle_id: jp.egawa.qrkeeper
-          - app: handy-print
-            directory: handy-print
-            scheme: 手渡しプリント
-            bundle_id: jp.egawa.handyprint
-          - app: meeting-spark
-            directory: meeting-spark
-            scheme: 会議前メモ
-            bundle_id: jp.egawa.meetingspark
-          - app: focus-pocket
-            directory: focus-pocket
-            scheme: 集中ポケット
-            bundle_id: jp.egawa.focuspocket
     runs-on: macos-26
     permissions:
       contents: read
     env:
+      APP_TARGET: ${{ github.event.client_payload.app }}
+      PROFILE_BASE64: ${{ github.event.client_payload.profile_base64 }}
+      PROFILE_NAME: ${{ github.event.client_payload.profile_name }}
       BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
       P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -46,53 +23,58 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: brew install xcodegen
-      - name: Import distribution certificate
+      - name: Select app
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$APP_TARGET" in
+            frame-drop) APP_DIR=frame-drop; SCHEME=FrameDrop; BUNDLE_ID=jp.egawa.framedrop ;;
+            qr-keeper) APP_DIR=qr-keeper; SCHEME='QR控え帳'; BUNDLE_ID=jp.egawa.qrkeeper ;;
+            handy-print) APP_DIR=handy-print; SCHEME='手渡しプリント'; BUNDLE_ID=jp.egawa.handyprint ;;
+            meeting-spark) APP_DIR=meeting-spark; SCHEME='会議前メモ'; BUNDLE_ID=jp.egawa.meetingspark ;;
+            focus-pocket) APP_DIR=focus-pocket; SCHEME='集中ポケット'; BUNDLE_ID=jp.egawa.focuspocket ;;
+            *) echo "Unknown app: $APP_TARGET"; exit 1 ;;
+          esac
+          test -n "$PROFILE_BASE64" && test -n "$PROFILE_NAME"
+          echo "APP_DIR=$APP_DIR" >> "$GITHUB_ENV"
+          echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
+          echo "BUNDLE_ID=$BUNDLE_ID" >> "$GITHUB_ENV"
+      - name: Import distribution certificate and App Store profile
         shell: bash
         run: |
           set -euo pipefail
           echo "$BUILD_CERTIFICATE_BASE64" | base64 -D > certificate.p12
+          echo "$PROFILE_BASE64" | base64 -D > profile.mobileprovision
           security create-keychain -p "$P12_PASSWORD" build.keychain
           security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -k "$P12_PASSWORD" build.keychain
           security list-keychain -d user -s build.keychain
-      - name: Configure App Store Connect API key
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.appstoreconnect/private_keys"
-          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$HOME/.appstoreconnect/private_keys/AuthKey_$APPSTORE_KEY_ID.p8"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/"
       - name: Archive and export IPA
         shell: bash
-        env:
-          APP_DIR: ${{ matrix.directory }}
-          SCHEME: ${{ matrix.scheme }}
-          BUNDLE_ID: ${{ matrix.bundle_id }}
-          APP_TARGET: ${{ matrix.app }}
         run: |
           set -euo pipefail
           cd "portfolio-apps/$APP_DIR"
           xcodegen generate
           xcodebuild -project "$SCHEME.xcodeproj" -scheme "$SCHEME" -configuration Release -destination 'generic/platform=iOS' \
             -archivePath "$PWD/build/$APP_TARGET.xcarchive" \
-            CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_$APPSTORE_KEY_ID.p8" \
-            -authenticationKeyID "$APPSTORE_KEY_ID" -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID" archive
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" archive
           EXPORT_OPTIONS="$PWD/build/ExportOptions.plist"
           /usr/libexec/PlistBuddy -c 'Add :method string app-store-connect' "$EXPORT_OPTIONS"
-          /usr/libexec/PlistBuddy -c 'Add :signingStyle string automatic' "$EXPORT_OPTIONS"
+          /usr/libexec/PlistBuddy -c 'Add :signingStyle string manual' "$EXPORT_OPTIONS"
           /usr/libexec/PlistBuddy -c "Add :teamID string $APPLE_TEAM_ID" "$EXPORT_OPTIONS"
+          /usr/libexec/PlistBuddy -c 'Add :provisioningProfiles dict' "$EXPORT_OPTIONS"
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:$BUNDLE_ID string $PROFILE_NAME" "$EXPORT_OPTIONS"
           xcodebuild -exportArchive -archivePath "$PWD/build/$APP_TARGET.xcarchive" \
-            -exportOptionsPlist "$EXPORT_OPTIONS" -exportPath "$PWD/build/export" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_$APPSTORE_KEY_ID.p8" \
-            -authenticationKeyID "$APPSTORE_KEY_ID" -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID"
+            -exportOptionsPlist "$EXPORT_OPTIONS" -exportPath "$PWD/build/export"
       - name: Upload to TestFlight
         shell: bash
-        env:
-          APP_DIR: ${{ matrix.directory }}
         run: |
           set -euo pipefail
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$HOME/.appstoreconnect/private_keys/AuthKey_$APPSTORE_KEY_ID.p8"
           IPA_PATH="$(find "portfolio-apps/$APP_DIR/build/export" -maxdepth 1 -name '*.ipa' -print -quit)"
           test -n "$IPA_PATH"
           xcrun altool --upload-app --type ios --file "$IPA_PATH" --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID"
