@@ -90,7 +90,6 @@ private struct RulerView: View {
             GeometryReader { _ in
                 Canvas { context, size in
                     let minorStep = CGFloat(pointsPerCentimeter / 10)
-                    let majorStep = CGFloat(pointsPerCentimeter)
                     let center = size.width / 2 + offset
                     let start = Int(floor((-center) / minorStep)) - 1
                     let end = Int(ceil((size.width - center) / minorStep)) + 1
@@ -155,7 +154,7 @@ private struct FloorPlanView: View {
             Section("Estimate") {
                 LabeledContent("Floor area", value: Units.area(width * depth))
                 LabeledContent("Perimeter", value: Units.length(2 * (width + depth)))
-                Button(saved ? "Saved" : "Save room estimate") { store.add(Measurement(name: "Room estimate", value: width * depth, kind: .area, date: .now, note: "\(Units.length(width)) x \(Units.length(depth))")); saved = true }
+                Button(saved ? "Saved" : "Save room estimate") { store.add(Measurement(id: UUID(), name: "Room estimate", value: width * depth, kind: .area, date: .now, note: "\(Units.length(width)) x \(Units.length(depth))")); saved = true }
                     .disabled(saved)
             }
             Section { Text("Use AR Measure for each wall, then enter the values here for a quick planning estimate.").font(.footnote) }
@@ -172,7 +171,7 @@ private final class MeasurementStore: ObservableObject {
     func remove(_ offsets: IndexSet) { items.remove(atOffsets: offsets) }
     func remove(_ item: Measurement) { items.removeAll { $0.id == item.id } }
 }
-private struct SaveSheet: View { let result: ARResult?; let kind: MeasurementKind; let save: (Measurement) -> Void; @Environment(\.dismiss) private var dismiss; @State private var name = "New measurement"; @State private var note = ""; var body: some View { NavigationStack { Form { Section("Value") { Text(result?.text ?? "-").font(.title2.bold()) }; Section("Details") { TextField("Name", text: $name); TextField("Note", text: $note, axis: .vertical) } }.navigationTitle("Save measurement").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { if let result { save(Measurement(name: name, value: result.meters, kind: kind, date: .now, note: note)) } } } } } }
+private struct SaveSheet: View { let result: ARResult?; let kind: MeasurementKind; let save: (Measurement) -> Void; @Environment(\.dismiss) private var dismiss; @State private var name = "New measurement"; @State private var note = ""; var body: some View { NavigationStack { Form { Section("Value") { Text(result?.text ?? "-").font(.title2.bold()) }; Section("Details") { TextField("Name", text: $name); TextField("Note", text: $note, axis: .vertical) } }.navigationTitle("Save measurement").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { if let result { save(Measurement(id: UUID(), name: name, value: result.meters, kind: kind, date: .now, note: note)) } } } } } }
 }
 
 private struct HistoryView: View { @EnvironmentObject private var store: MeasurementStore; @AppStorage("caliqo.unitSystem") private var unitSystem = UnitSystem.metric.rawValue; var body: some View { NavigationStack { List { if store.items.isEmpty { ContentUnavailableView("No measurements", systemImage: "tray", description: Text("Save an AR measurement to find it here.")) } else { ForEach(store.items) { item in NavigationLink { MeasurementDetailView(item: item, unitSystem: UnitSystem(rawValue: unitSystem) ?? .metric) } label: { MeasurementRow(item: item, unitSystem: UnitSystem(rawValue: unitSystem) ?? .metric) } }.onDelete(perform: store.remove) } }.navigationTitle("History").toolbar { EditButton() } } } }
