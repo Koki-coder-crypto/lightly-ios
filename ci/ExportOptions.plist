@@ -3,6 +3,10 @@
 <plist version="1.0"><dict>
   <key>method</key><string>app-store-connect</string>
   <key>signingStyle</key><string>manual</string>
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>jp.egawa.lightly</key><string>Lightly AppStore CI</string>
+  </dict>
   <key>stripSwiftSymbols</key><true/>
   <key>uploadSymbols</key><true/>
 </dict></plist>
