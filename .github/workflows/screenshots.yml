@@ -17,15 +17,15 @@ jobs:
           xcodegen generate
           SIMULATOR_ID="$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {print $2; exit}')"
           test -n "$SIMULATOR_ID"
+          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
           xcrun simctl boot "$SIMULATOR_ID" || true
-          xcrun simctl bootstatus "$SIMULATOR_ID" -b
           xcodebuild -project Lightly.xcodeproj -scheme Lightly -sdk iphonesimulator -configuration Release -destination "platform=iOS Simulator,id=$SIMULATOR_ID" CODE_SIGNING_ALLOWED=NO build
-          xcrun simctl launch booted jp.egawa.lightly
+          xcrun simctl launch "$SIMULATOR_ID" jp.egawa.lightly
           sleep 3
       - name: Capture App Store screenshot
         run: |
           mkdir -p screenshots
-          xcrun simctl io booted screenshot screenshots/Lightly-home-original.png
+          xcrun simctl io "$SIMULATOR_ID" screenshot screenshots/Lightly-home-original.png
           sips --resampleHeightWidth 2778 1284 screenshots/Lightly-home-original.png --out screenshots/Lightly-home.png
           rm screenshots/Lightly-home-original.png
       - uses: actions/upload-artifact@v4
