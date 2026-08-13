@@ -46,7 +46,7 @@ final class RoomRollStore: ObservableObject {
     var isAuthorized: Bool { authorization == .authorized || authorization == .limited }
     func requestAccess() async {
         authorization = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-        guard isAuthorized else { error = "写真へのアクセスを許可すると、端末内で容量の大きい項目を見直せます。"; return }
+        guard isAuthorized else { error = String(localized: "写真へのアクセスを許可すると、端末内で容量の大きい項目を見直せます。"); return }
         await scan()
     }
     func scan() async {
@@ -70,7 +70,7 @@ final class RoomRollStore: ObservableObject {
         do {
             try await PHPhotoLibrary.shared().performChanges { PHAssetChangeRequest.deleteAssets(selected.map(\.asset) as NSArray) }
             await scan(); return true
-        } catch { self.error = "写真の削除を完了できませんでした。写真アプリの権限を確認してください。"; return false }
+        } catch { self.error = String(localized: "写真の削除を完了できませんでした。写真アプリの権限を確認してください。"); return false }
     }
     private func orderedOptions() -> PHFetchOptions { let options = PHFetchOptions(); options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]; return options }
     private func loadItems(from assets: PHFetchResult<PHAsset>, cap: Int) async -> [MediaItem] {

@@ -53,3 +53,14 @@
 "プライバシーを最優先" = "Private by design";
 "おすすめの年間プラン" = "Recommended annual plan";
 "月額サブスクリプション" = "Monthly subscription plan";
+"写真へのアクセスを許可すると、端末内で容量の大きい項目を見直せます。" = "Allow photo access to review larger items on this device.";
+"写真の削除を完了できませんでした。写真アプリの権限を確認してください。" = "The photos could not be removed. Check Photos permission and try again.";
+"%lld件を写真から削除" = "Remove %lld items from Photos";
+"%lld件を削除" = "Remove %lld items";
+"%lld分 %lld秒" = "%lld min %lld sec";
+"削除候補 %lld件" = "%lld marked for removal";
+"%lld件中%lld件目。削除候補は%lld件" = "Item %2$lld of %1$lld. %3$lld marked for removal.";
+"削除" = "Remove";
+"写真。右にスワイプで残す、左にスワイプで削除候補にします" = "Photo. Swipe right to keep or left to mark it for removal.";
+"%lld件をまとめて確認してから削除できます。" = "You can review %lld marked items together before removing them.";
+"%lld件を確認して削除" = "Review and remove %lld items";

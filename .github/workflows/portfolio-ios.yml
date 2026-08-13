@@ -3,7 +3,7 @@ name: Portfolio iOS
 on:
   push:
     branches: [master]
-    paths: ["portfolio-apps/Shared/**", "portfolio-apps/frame-drop/**", "portfolio-apps/qr-keeper/**", "portfolio-apps/handy-print/**", "portfolio-apps/meeting-spark/**", "portfolio-apps/focus-pocket/**", ".github/workflows/portfolio-ios.yml"]
+    paths: ["portfolio-apps/Shared/**", "portfolio-apps/frame-drop/**", "portfolio-apps/qr-keeper/**", "portfolio-apps/handy-print/**", "portfolio-apps/meeting-spark/**", "portfolio-apps/focus-pocket/**", "portfolio-apps/warranty-ledger/**", "portfolio-apps/leave-check/**", "portfolio-apps/receipt-split/**", "portfolio-apps/parcel-note/**", "portfolio-apps/wifi-notes/**", "portfolio-apps/home-care/**", ".github/workflows/portfolio-ios.yml"]
   workflow_dispatch:
 
 jobs:
@@ -23,6 +23,18 @@ jobs:
             scheme: 会議前メモ
           - app: focus-pocket
             scheme: 集中ポケット
+          - app: warranty-ledger
+            scheme: 持ち物期限帳
+          - app: leave-check
+            scheme: 出発チェック
+          - app: receipt-split
+            scheme: Receipt Split
+          - app: parcel-note
+            scheme: 荷物メモ
+          - app: wifi-notes
+            scheme: Wi-Fiメモ
+          - app: home-care
+            scheme: おうちメンテ
     defaults:
       run:
         working-directory: portfolio-apps/${{ matrix.app }}

@@ -1,30 +1,28 @@
-# 5アプリ TestFlight 提出設定
+# Portfolio Apps — TestFlight upload setup
 
-このワークフローは `Portfolio TestFlight` を手動実行し、選択した1アプリだけを署名・アーカイブ・TestFlightへアップロードします。リリースビルドやストアへの公開は実行しません。
+`Portfolio TestFlight` builds and uploads exactly one selected app. It supports FrameDrop, QR Keeper, Handy Print, Meeting Spark, Focus Pocket, Warranty Ledger, Leave Check, Receipt Split, Parcel Note, Wi-Fi Notes, and Home Care.
 
-## Apple側で先に作成するもの
+## One-time repository secrets
 
-各Bundle ID（`jp.egawa.framedrop`、`jp.egawa.qrkeeper`、`jp.egawa.handyprint`、`jp.egawa.meetingspark`、`jp.egawa.focuspocket`）について、App Store Connectのアプリレコード、App ID、App Store配布用Provisioning Profileを1つずつ作成します。課金商品は各アプリで同じSubscription Group内に月額・年額を作成し、コードのProduct IDと一致させます。
+Configure these repository secrets once, using an Apple Distribution certificate and an App Store Connect API key that can create App IDs, profiles, and app records:
 
-## GitHub Actions Secrets
+- `BUILD_CERTIFICATE_BASE64`
+- `P12_PASSWORD`
+- `APPLE_TEAM_ID`
+- `APPSTORE_KEY_ID`
+- `APPSTORE_ISSUER_ID`
+- `APPSTORE_PRIVATE_KEY`
 
-Lightlyと共通で使う既存の秘密値: `BUILD_CERTIFICATE_BASE64`、`P12_PASSWORD`、`APPLE_TEAM_ID`、`APPSTORE_KEY_ID`、`APPSTORE_ISSUER_ID`、`APPSTORE_PRIVATE_KEY`。
+The workflow creates the selected App ID, App Store Connect record, and an App Store distribution profile when they do not already exist. It does not store a profile in the repository.
 
-さらに下記をリポジトリSecretsへ追加します。`*_PROFILE_BASE64`は対応する`.mobileprovision`をBase64化した値、`*_PROFILE_NAME`はApple Developer上のプロファイル名です。
+## Before each first upload
 
-| アプリ | Profile secrets |
-| --- | --- |
-| FrameDrop | `FRAMEDROP_PROFILE_BASE64`, `FRAMEDROP_PROFILE_NAME` |
-| QR控え帳 | `QRKEEPER_PROFILE_BASE64`, `QRKEEPER_PROFILE_NAME` |
-| 手渡しプリント | `HANDYPRINT_PROFILE_BASE64`, `HANDYPRINT_PROFILE_NAME` |
-| 会議前メモ | `MEETINGSPARK_PROFILE_BASE64`, `MEETINGSPARK_PROFILE_NAME` |
-| 集中ポケット | `FOCUSPOCKET_PROFILE_BASE64`, `FOCUSPOCKET_PROFILE_NAME` |
+1. In App Store Connect, create the monthly and yearly subscription products listed in the app's `APP_STORE_SUBMISSION.md`, including prices and trial terms.
+2. Complete the app's localization, App Privacy answers, support URL, privacy-policy URL, screenshots, and review notes.
+3. Run the `Portfolio iOS` workflow and confirm the selected app's simulator build passes.
 
-## 実行順
+## Upload
 
-1. StoreKit商品、価格、無料トライアル、レビュー用スクリーンショットを各アプリで入力する。
-2. `Portfolio TestFlight`から対象アプリを選び、TestFlightへ1本ずつアップロードする。
-3. Sandboxで購入・復元・無料枠の上限を確認する。
-4. App Review提出は、各アプリのApp Store Connect画面でメタデータ・スクリーンショット・審査メモを確認してから実行する。
+Open **Actions → Portfolio TestFlight → Run workflow**, select one app, and run it. The workflow uploads only to TestFlight; it does not submit the app for App Review or make it public.
 
-GitHub ActionsのアップロードはTestFlightへの外部提出操作になるため、実行直前に対象アプリと送信内容を再確認します。
+After Apple finishes processing the build, complete the Sandbox purchase and restore test, then submit the version from its App Store Connect page.

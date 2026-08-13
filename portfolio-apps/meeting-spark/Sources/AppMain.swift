@@ -44,13 +44,13 @@ final class VoiceStore: NSObject, ObservableObject, AVAudioRecorderDelegate {
 
     func startRecording(isPro: Bool) {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            error = "会議名を入力してください。"
+            error = "Enter a meeting title first."
             return
         }
         AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
             Task { @MainActor in
                 if granted { self?.begin(isPro: isPro) }
-                else { self?.error = "マイクへのアクセスを許可してください。" }
+            else { self?.error = "Allow microphone access to record a voice memo." }
             }
         }
     }
@@ -64,7 +64,7 @@ final class VoiceStore: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 settings: [AVFormatIDKey: Int(kAudioFormatMPEG4AAC), AVSampleRateKey: 44_100, AVNumberOfChannelsKey: 1, AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue]
             )
             guard isPro || FreeUsageQuota.consume(namespace: freeNamespace, limit: freeMonthlyLimit) else {
-                error = "今月の無料録音は使い切りました。Proなら無制限です。"
+                error = "You have used this month's free recordings. Pro unlocks unlimited recordings."
                 return
             }
             recorder = audioRecorder
@@ -75,7 +75,7 @@ final class VoiceStore: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 Task { @MainActor in self?.elapsed += 1 }
             }
         } catch {
-            self.error = "録音を開始できませんでした。"
+            self.error = "Recording could not be started."
         }
     }
 
@@ -118,33 +118,33 @@ struct MeetingHomeView: View {
             List {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("会議の直後に、10秒だけ。", systemImage: "mic.fill")
+                        Label("Capture the next action after a meeting.", systemImage: "mic.fill")
                             .font(.system(.title3, design: .rounded, weight: .bold))
-                        Text("会議名と次の行動を一緒に残す、端末内完結の音声メモです。")
+                        Text("Keep a meeting title, short voice memo, and next action together on this device.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
-                Section(store.isRecording ? "録音中" : "新しいメモ") {
-                    TextField("会議名", text: $store.title).disabled(store.isRecording)
-                    TextField("次の行動（任意）", text: $store.nextAction).disabled(store.isRecording)
+                Section(store.isRecording ? "Recording" : "New memo") {
+                    TextField("Meeting title", text: $store.title).disabled(store.isRecording)
+                    TextField("Next action (optional)", text: $store.nextAction).disabled(store.isRecording)
                     HStack {
                         Text("\(Int(store.elapsed / 60)):\(String(format: "%02d", Int(store.elapsed) % 60))").monospacedDigit()
                         Spacer()
                         Button { store.toggleRecording(isPro: subscription.isPro) } label: {
-                            Label(store.isRecording ? "録音を止める" : "録音を始める", systemImage: store.isRecording ? "stop.circle.fill" : "record.circle")
+                            Label(store.isRecording ? "Stop recording" : "Start recording", systemImage: store.isRecording ? "stop.circle.fill" : "record.circle")
                         }
                         .buttonStyle(.borderedProminent).tint(store.isRecording ? .red : .blue)
                     }
                 }
-                Section("最近のメモ") {
-                    if store.memos.isEmpty { Text("録音したメモはここで開けます。").foregroundStyle(.secondary) }
+                Section("Recent memos") {
+                    if store.memos.isEmpty { Text("Your recorded memos will appear here.").foregroundStyle(.secondary) }
                     ForEach(store.memos) { memo in
                         HStack {
                             Button { store.play(memo) } label: { Image(systemName: "play.circle.fill").font(.title2) }
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(memo.title).font(.headline)
-                                if !memo.action.isEmpty { Text("次: \(memo.action)").font(.subheadline).foregroundStyle(.secondary) }
-                                Text("\(Int(memo.duration))秒  \(memo.createdAt.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.tertiary)
+                                if !memo.action.isEmpty { Text("Next: \(memo.action)").font(.subheadline).foregroundStyle(.secondary) }
+                                Text("\(Int(memo.duration)) sec  \(memo.createdAt.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.tertiary)
                             }
                             Spacer()
                         }
@@ -152,16 +152,16 @@ struct MeetingHomeView: View {
                 }
                 if !subscription.isPro {
                     Section {
-                        Text("無料枠: 今月あと \(store.freeMemosRemaining)/\(store.freeMonthlyLimit) 件").font(.caption).foregroundStyle(.secondary)
-                        Button("Proで無制限の録音へ") { showPaywall = true }
+                        Text("Free plan: \(store.freeMemosRemaining)/\(store.freeMonthlyLimit) recordings left this month").font(.caption).foregroundStyle(.secondary)
+                        Button("Unlock unlimited recordings with Pro") { showPaywall = true }
                     }
                 }
             }
-            .navigationTitle("会議前メモ")
+            .navigationTitle("Meeting Spark")
             .sheet(isPresented: $showPaywall) {
-                SubscriptionPaywall(name: "会議前メモ", benefits: ["無制限の録音メモ", "会議名と次アクションの記録", "端末内だけで音声を保存"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/privacy.html")!)
+                SubscriptionPaywall(name: "Meeting Spark", benefits: ["Unlimited voice memos", "Meeting titles and next actions", "Audio stored only on your device"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/portfolio/privacy.html")!)
             }
-            .alert("確認", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
+            .alert("Notice", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
                 Button("OK", role: .cancel) {}
             } message: { Text(store.error ?? "") }
         }

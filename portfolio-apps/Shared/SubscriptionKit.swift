@@ -39,12 +39,22 @@ final class SubscriptionManager: ObservableObject {
     @Published private(set) var isPro = false
     @Published private(set) var isLoading = false
     @Published var errorMessage: String?
+    private var transactionUpdates: Task<Void, Never>?
 
     init(monthlyID: String, yearlyID: String) {
         self.monthlyID = monthlyID
         self.yearlyID = yearlyID
+        transactionUpdates = Task { [weak self] in
+            for await result in Transaction.updates {
+                guard case .verified(let transaction) = result else { continue }
+                await transaction.finish()
+                await self?.refresh()
+            }
+        }
         Task { await refresh() }
     }
+
+    deinit { transactionUpdates?.cancel() }
 
     func refresh() async {
         isPro = false
@@ -63,12 +73,12 @@ final class SubscriptionManager: ObservableObject {
             guard case .success(let result) = try await product.purchase(), case .verified(let transaction) = result else { return }
             await transaction.finish()
             await refresh()
-        } catch { errorMessage = "購入を完了できませんでした。時間をおいてもう一度お試しください。" }
+        } catch { errorMessage = "Your purchase could not be completed. Please try again." }
     }
 
     func restore() async {
         do { try await AppStore.sync(); await refresh() }
-        catch { errorMessage = "購入を復元できませんでした。" }
+        catch { errorMessage = "Your purchases could not be restored." }
     }
 }
 
@@ -85,12 +95,12 @@ struct SubscriptionPaywall: View {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 10) {
                         Image(systemName: "sparkles").font(.system(size: 36)).foregroundStyle(.orange)
-                        Text("プライバシーを最優先").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                        Text("Private by design").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
                     }
                     Text("\(name) Pro").font(.system(.largeTitle, design: .rounded, weight: .bold))
                     ForEach(benefits, id: \.self) { Label($0, systemImage: "checkmark.circle.fill").foregroundStyle(.primary) }
                     if subscription.products.isEmpty {
-                        ProgressView("プランを読み込み中…").frame(maxWidth: .infinity).padding()
+                        ProgressView("Loading plans…").frame(maxWidth: .infinity).padding()
                     } else {
                         ForEach(subscription.products, id: \.id) { product in
                             Button { Task { await subscription.purchase(product) } } label: {
@@ -100,20 +110,20 @@ struct SubscriptionPaywall: View {
                             .buttonStyle(.borderedProminent)
                             .tint(product.id == subscription.yearlyID ? .blue : .gray)
                             .disabled(subscription.isLoading)
-                            .accessibilityHint(product.id == subscription.yearlyID ? "おすすめの年間プラン" : "月額サブスクリプション")
+                            .accessibilityHint(product.id == subscription.yearlyID ? "Recommended annual subscription" : "Monthly subscription")
                         }
                     }
-                    Button("購入を復元") { Task { await subscription.restore() } }.frame(maxWidth: .infinity)
-                    Text("トライアル対象の場合、期間と終了後の更新価格は購入前にAppleが表示します。お支払いはApple IDに請求され、App Storeの設定からいつでも管理・解約できます。").font(.caption).foregroundStyle(.secondary)
-                    HStack { Link("利用規約", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!); Link("プライバシー", destination: privacyURL) }.font(.caption)
+                    Button("Restore purchases") { Task { await subscription.restore() } }.frame(maxWidth: .infinity)
+                    Text("If eligible, Apple shows the trial period and renewal price before purchase. Payment is charged to your Apple ID and subscriptions can be managed or cancelled in App Store settings.").font(.caption).foregroundStyle(.secondary)
+                    HStack { Link("Terms of Use", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!); Link("Privacy Policy", destination: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/portfolio/privacy.html")!) }.font(.caption)
                 }
                 .padding(24)
                 .frame(maxWidth: 640, alignment: .leading)
                 .background(Color(uiColor: .systemGroupedBackground))
             }
             .navigationTitle("Pro")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("閉じる") { dismiss() } } }
-            .alert("購入を完了できませんでした", isPresented: Binding(get: { subscription.errorMessage != nil }, set: { if !$0 { subscription.errorMessage = nil } })) {
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
+            .alert("Purchase issue", isPresented: Binding(get: { subscription.errorMessage != nil }, set: { if !$0 { subscription.errorMessage = nil } })) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(subscription.errorMessage ?? "")
@@ -123,10 +133,10 @@ struct SubscriptionPaywall: View {
 
     private func detail(_ product: Product) -> String {
         guard let offer = product.subscription?.introductoryOffer else { return product.description }
-        return "\(offer.period.value) \(unit(offer.period.unit))無料トライアル後 \(product.displayPrice)/\(unit(product.subscription?.subscriptionPeriod.unit ?? .month))"
+        return "\(offer.period.value) \(unit(offer.period.unit)) free trial, then \(product.displayPrice)/\(unit(product.subscription?.subscriptionPeriod.unit ?? .month))"
     }
 
     private func unit(_ unit: Product.SubscriptionPeriod.Unit) -> String {
-        switch unit { case .day: "日"; case .week: "週"; case .month: "月"; case .year: "年"; @unknown default: "期間" }
+        switch unit { case .day: "day"; case .week: "week"; case .month: "month"; case .year: "year"; @unknown default: "period" }
     }
 }

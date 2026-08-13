@@ -1,0 +1,23 @@
+﻿name: 出発チェック
+options:
+  bundleIdPrefix: jp.egawa
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    MARKETING_VERSION: 1.0.0
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: 5.0
+targets:
+  出発チェック:
+    type: application
+    platform: iOS
+    sources: [Sources, Assets.xcassets]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: jp.egawa.leavecheck
+        INFOPLIST_KEY_CFBundleDisplayName: "出発チェック"
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1"

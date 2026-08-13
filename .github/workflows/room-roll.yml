@@ -1,4 +1,4 @@
-name: PixaTidy Cleaner iOS
+name: Photo Cleaner iOS
 
 on:
   pull_request:

@@ -1,0 +1,2 @@
+"CFBundleDisplayName" = "QR Keeper";
+"NSCameraUsageDescription" = "QR Keeper uses the camera only while you scan a QR code to save on this device.";

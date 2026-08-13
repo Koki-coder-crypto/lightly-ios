@@ -1,0 +1,120 @@
+﻿import StoreKit
+import SwiftUI
+
+@main
+struct AppMain: App {
+    @StateObject private var subscription = SubscriptionManager()
+    var body: some Scene { WindowGroup { DashboardView().environmentObject(subscription) } }
+}
+
+private enum AppSpec {
+    static let name = "Wi-Fi Notes"
+    static let icon = "wifi"
+    static let job = "Keep Wi-Fi connection notes by place on this device."
+    static let free = "Save up to 10 place notes."
+    static let pro = "Unlimited place notes"
+    static let action = "Add place"
+    static let freeLimit = 10
+    static let monthlyID = "jp.egawa.wifinotes.pro.monthly"
+    static let yearlyID = "jp.egawa.wifinotes.pro.yearly"
+}
+
+@MainActor
+final class UtilityStore: ObservableObject {
+    @Published var title = ""
+    @Published var detail = ""
+    @Published private(set) var entries: [Entry] = []
+    @Published var isRunning = false
+    @Published var limitReached = false
+    struct Entry: Identifiable, Codable { let id: UUID; let title: String; let detail: String; let createdAt: Date }
+    private let key = "jp.egawa.wifinotes.entries"
+    init() { entries = (try? JSONDecoder().decode([Entry].self, from: UserDefaults.standard.data(forKey: key) ?? Data())) ?? [] }
+    func save(isPro: Bool) {
+        let cleaned = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return }
+        guard isPro || entries.count < AppSpec.freeLimit else { limitReached = true; return }
+        entries.insert(Entry(id: UUID(), title: cleaned, detail: detail.trimmingCharacters(in: .whitespacesAndNewlines), createdAt: .now), at: 0)
+        title = ""; detail = ""
+        if let data = try? JSONEncoder().encode(entries) { UserDefaults.standard.set(data, forKey: key) }
+    }
+    func remove(_ offsets: IndexSet) { entries.remove(atOffsets: offsets); if let data = try? JSONEncoder().encode(entries) { UserDefaults.standard.set(data, forKey: key) } }
+}
+
+struct DashboardView: View {
+    @StateObject private var store = UtilityStore()
+    @EnvironmentObject private var subscription: SubscriptionManager
+    @State private var showPaywall = false
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Label(AppSpec.job, systemImage: AppSpec.icon).font(.headline)
+                    Text(subscription.isPro ? AppSpec.pro : AppSpec.free).font(.subheadline).foregroundStyle(.secondary)
+                }
+                Section("New place") {
+                    TextField("Place name", text: $store.title)
+                    TextField("Connection note (optional)", text: $store.detail)
+                    Button(AppSpec.action) { store.save(isPro: subscription.isPro) }.buttonStyle(.borderedProminent).disabled(store.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                Section("Saved places") {
+                    if store.entries.isEmpty { Text("No places yet").foregroundStyle(.secondary) }
+                    ForEach(store.entries) { entry in
+                        VStack(alignment: .leading, spacing: 4) { Text(entry.title).font(.headline); if !entry.detail.isEmpty { Text(entry.detail).font(.subheadline).foregroundStyle(.secondary) }; Text(entry.createdAt, style: .date).font(.caption).foregroundStyle(.tertiary) }
+                    }.onDelete(perform: store.remove)
+                }
+                if !subscription.isPro { Section { Button("See Pro") { showPaywall = true } } }
+            }
+            .navigationTitle(AppSpec.name)
+            .sheet(isPresented: $showPaywall) { PaywallView() }
+            .alert("Free limit reached", isPresented: $store.limitReached) { Button("See Pro") { showPaywall = true }; Button("Close", role: .cancel) {} } message: { Text("The free plan stores up to \(AppSpec.freeLimit) notes.") }
+        }
+    }
+}
+
+@MainActor
+final class SubscriptionManager: ObservableObject {
+    @Published var products: [Product] = []
+    @Published var isPro = false
+    @Published var isLoading = false
+    private var updates: Task<Void, Never>?
+    init() {
+        updates = Task { [weak self] in
+            for await result in Transaction.updates {
+                guard case .verified(let transaction) = result else { continue }
+                await transaction.finish()
+                await self?.refresh()
+            }
+        }
+        Task { await refresh() }
+    }
+    deinit { updates?.cancel() }
+    func refresh() async {
+        isPro = false
+        products = (try? await Product.products(for: [AppSpec.monthlyID, AppSpec.yearlyID]))?.sorted { ($0.id == AppSpec.yearlyID ? 0 : 1) < ($1.id == AppSpec.yearlyID ? 0 : 1) } ?? []
+        for await item in Transaction.currentEntitlements { if case .verified(let transaction) = item, [AppSpec.monthlyID, AppSpec.yearlyID].contains(transaction.productID) { isPro = true } }
+    }
+    func purchase(_ product: Product) async {
+        isLoading = true; defer { isLoading = false }
+        do {
+            guard case .success(let result) = try await product.purchase(), case .verified(let transaction) = result else { return }
+            await transaction.finish(); await refresh()
+        } catch { }
+    }
+    func restore() async { try? await AppStore.sync(); await refresh() }
+}
+
+private struct PaywallView: View {
+    @Environment(.dismiss) private var dismiss
+    @EnvironmentObject private var subscription: SubscriptionManager
+    var body: some View { NavigationStack { VStack(alignment: .leading, spacing: 20) {
+        Image(systemName: "sparkles").font(.largeTitle).foregroundStyle(.orange)
+        Text("\(AppSpec.name) Pro").font(.largeTitle.bold())
+        Text(AppSpec.pro)
+        ForEach(subscription.products, id: \.id) { product in Button { Task { await subscription.purchase(product) } } label: { HStack { VStack(alignment: .leading) { Text(product.displayName); Text(product.description).font(.caption) }; Spacer(); Text(product.displayPrice) }.frame(maxWidth: .infinity).padding() }.buttonStyle(.borderedProminent) }
+        Button("購入を復元") { Task { await subscription.restore() } }
+        Link("プライバシーポリシー", destination: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/portfolio/privacy.html")!)
+        Link("利用規約（Apple標準EULA）", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
+        Text("トライアルの期間と終了後の更新価格は購入前に表示されます。サブスクリプションはApple IDに請求され、App Storeの設定から管理・解約できます。").font(.caption).foregroundStyle(.secondary)
+        Spacer()
+    }.padding().navigationTitle("Pro").toolbar { Button("閉じる") { dismiss() } } } }
+}

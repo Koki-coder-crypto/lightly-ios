@@ -2,6 +2,23 @@ name: Portfolio TestFlight
 
 on:
   workflow_dispatch:
+    inputs:
+      app:
+        description: "App to upload to TestFlight"
+        required: true
+        type: choice
+        options:
+          - frame-drop
+          - qr-keeper
+          - handy-print
+          - meeting-spark
+          - focus-pocket
+          - warranty-ledger
+          - leave-check
+          - receipt-split
+          - parcel-note
+          - wifi-notes
+          - home-care
   repository_dispatch:
     types: [portfolio-testflight-upload]
 
@@ -11,9 +28,7 @@ jobs:
     permissions:
       contents: read
     env:
-      APP_TARGET: ${{ github.event.client_payload.app }}
-      PROFILE_BASE64: ${{ github.event.client_payload.profile_base64 }}
-      PROFILE_NAME: ${{ github.event.client_payload.profile_name }}
+      APP_TARGET: ${{ inputs.app || github.event.client_payload.app }}
       BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
       P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -28,28 +43,46 @@ jobs:
         run: |
           set -euo pipefail
           case "$APP_TARGET" in
-            frame-drop) APP_DIR=frame-drop; SCHEME=FrameDrop; BUNDLE_ID=jp.egawa.framedrop ;;
-            qr-keeper) APP_DIR=qr-keeper; SCHEME='QR控え帳'; BUNDLE_ID=jp.egawa.qrkeeper ;;
-            handy-print) APP_DIR=handy-print; SCHEME='手渡しプリント'; BUNDLE_ID=jp.egawa.handyprint ;;
-            meeting-spark) APP_DIR=meeting-spark; SCHEME='会議前メモ'; BUNDLE_ID=jp.egawa.meetingspark ;;
-            focus-pocket) APP_DIR=focus-pocket; SCHEME='集中ポケット'; BUNDLE_ID=jp.egawa.focuspocket ;;
+            frame-drop) APP_DIR=frame-drop; SCHEME=FrameDrop; BUNDLE_ID=jp.egawa.framedrop; APP_NAME=FrameDrop; APP_SKU=framedrop-ios-001 ;;
+            qr-keeper) APP_DIR=qr-keeper; SCHEME='QR控え帳'; BUNDLE_ID=jp.egawa.qrkeeper; APP_NAME='QR Keeper'; APP_SKU=qrkeeper-ios-001 ;;
+            handy-print) APP_DIR=handy-print; SCHEME='手渡しプリント'; BUNDLE_ID=jp.egawa.handyprint; APP_NAME='Handy Print'; APP_SKU=handyprint-ios-001 ;;
+            meeting-spark) APP_DIR=meeting-spark; SCHEME='会議前メモ'; BUNDLE_ID=jp.egawa.meetingspark; APP_NAME='Meeting Spark'; APP_SKU=meetingspark-ios-001 ;;
+            focus-pocket) APP_DIR=focus-pocket; SCHEME='集中ポケット'; BUNDLE_ID=jp.egawa.focuspocket; APP_NAME='Focus Pocket'; APP_SKU=focuspocket-ios-001 ;;
+            warranty-ledger) APP_DIR=warranty-ledger; SCHEME='持ち物期限帳'; BUNDLE_ID=jp.egawa.warrantyledger; APP_NAME='Warranty Ledger'; APP_SKU=warrantyledger-ios-001 ;;
+            leave-check) APP_DIR=leave-check; SCHEME='出発チェック'; BUNDLE_ID=jp.egawa.leavecheck; APP_NAME='Leave Check'; APP_SKU=leavecheck-ios-001 ;;
+            receipt-split) APP_DIR=receipt-split; SCHEME='Receipt Split'; BUNDLE_ID=jp.egawa.receiptsplit; APP_NAME='Receipt Split'; APP_SKU=receiptsplit-ios-001 ;;
+            parcel-note) APP_DIR=parcel-note; SCHEME='荷物メモ'; BUNDLE_ID=jp.egawa.parcelnote; APP_NAME='Parcel Note'; APP_SKU=parcelnote-ios-001 ;;
+            wifi-notes) APP_DIR=wifi-notes; SCHEME='Wi-Fiメモ'; BUNDLE_ID=jp.egawa.wifinotes; APP_NAME='Wi-Fi Notes'; APP_SKU=wifinotes-ios-001 ;;
+            home-care) APP_DIR=home-care; SCHEME='おうちメンテ'; BUNDLE_ID=jp.egawa.homecare; APP_NAME='Home Care'; APP_SKU=homecare-ios-001 ;;
             *) echo "Unknown app: $APP_TARGET"; exit 1 ;;
           esac
-          test -n "$PROFILE_BASE64" && test -n "$PROFILE_NAME"
           echo "APP_DIR=$APP_DIR" >> "$GITHUB_ENV"
           echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
           echo "BUNDLE_ID=$BUNDLE_ID" >> "$GITHUB_ENV"
+          echo "APP_NAME=$APP_NAME" >> "$GITHUB_ENV"
+          echo "APP_SKU=$APP_SKU" >> "$GITHUB_ENV"
       - name: Import distribution certificate and App Store profile
         shell: bash
         run: |
           set -euo pipefail
           echo "$BUILD_CERTIFICATE_BASE64" | base64 -D > certificate.p12
-          echo "$PROFILE_BASE64" | base64 -D > profile.mobileprovision
           security create-keychain -p "$P12_PASSWORD" build.keychain
           security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -k "$P12_PASSWORD" build.keychain
           security list-keychain -d user -s build.keychain
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          security find-certificate -p -c "Apple Distribution" build.keychain > distribution.pem
+          CERTIFICATE_SERIAL="$(openssl x509 -in distribution.pem -noout -serial | cut -d= -f2)"
+          test -n "$CERTIFICATE_SERIAL"
+          echo "CERTIFICATE_SERIAL=$CERTIFICATE_SERIAL" >> "$GITHUB_ENV"
+      - name: Create App Store record and provisioning profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/appstoreconnect" "$HOME/Library/MobileDevice/Provisioning Profiles"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$RUNNER_TEMP/appstoreconnect/AuthKey_$APPSTORE_KEY_ID.p8"
+          export APPSTORE_KEY_PATH="$RUNNER_TEMP/appstoreconnect/AuthKey_$APPSTORE_KEY_ID.p8"
+          ruby ci/provision_portfolio_app.rb
+          test -s profile.mobileprovision
           cp profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/"
       - name: Archive and export IPA
         shell: bash
