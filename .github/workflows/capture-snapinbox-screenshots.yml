@@ -42,8 +42,14 @@ jobs:
           gem install fastlane --no-document
           mkdir -p fastlane/screenshots/en-US
           cp "$GITHUB_WORKSPACE/store-screenshots/SnapInbox-01-6.5.png" fastlane/screenshots/en-US/01-snapinbox.png
+          cat > fastlane/Deliverfile <<'RUBY'
+          app_identifier "jp.egawa.roomroll"
+          skip_binary_upload true
+          skip_metadata true
+          skip_screenshots false
+          RUBY
           ruby -rjson -e 'File.write("appstore-api-key.json", JSON.generate({key_id: ENV.fetch("APPSTORE_KEY_ID"), issuer_id: ENV.fetch("APPSTORE_ISSUER_ID"), key: ENV.fetch("APPSTORE_PRIVATE_KEY")}))'
-          fastlane deliver --api_key_path appstore-api-key.json --app_identifier jp.egawa.roomroll --skip_binary_upload true --skip_metadata true --skip_screenshots false --force true
+          fastlane deliver --api_key_path appstore-api-key.json --force true
       - uses: actions/upload-artifact@v4
         with:
           name: snapinbox-store-screenshots
