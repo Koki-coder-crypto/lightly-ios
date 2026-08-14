@@ -93,10 +93,7 @@ jobs:
           end
 
           apps = request("get", "/v1/apps?filter%5BbundleId%5D=jp.egawa.roomroll&limit=1").fetch("data")
-          if apps.empty?
-            request("post", "/v1/apps", {data: {type: "apps", attributes: {bundleId: "jp.egawa.roomroll", name: "SnapInbox: Screenshot Organizer", primaryLocale: "en-US", sku: "roomroll-ios-001"}}})
-            sleep 10
-          end
+          abort("Create the SnapInbox app record once in App Store Connect before running TestFlight upload.") if apps.empty?
 
           expected_serial = ENV.fetch("ROOMROLL_CERT_SERIAL").delete(":").upcase
           certificates = request("get", "/v1/certificates?filter%5BcertificateType%5D=DISTRIBUTION&limit=200").fetch("data")
