@@ -17,5 +17,6 @@ targets:
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "スクリーンショットを端末内で見直し、あとで確認する項目を整理するために写真ライブラリを使用します。"
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "確認して選んだ項目だけを写真ライブラリの「最近削除した項目」へ移動するために使用します。"
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
