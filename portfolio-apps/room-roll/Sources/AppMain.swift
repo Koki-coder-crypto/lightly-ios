@@ -3,9 +3,9 @@ import SwiftUI
 import UIKit
 
 @main
-struct RoomRollApp: App {
+struct SnapInboxApp: App {
     @StateObject private var subscription = SubscriptionManager(monthlyID: "jp.egawa.roomroll.pro.monthly", yearlyID: "jp.egawa.roomroll.pro.yearly")
-    var body: some Scene { WindowGroup { RoomRollView().environmentObject(subscription) } }
+    var body: some Scene { WindowGroup { SnapInboxView().environmentObject(subscription) } }
 }
 
 struct MediaItem: Identifiable {
@@ -36,13 +36,18 @@ enum TidyCategory: CaseIterable, Hashable, Identifiable {
 }
 
 @MainActor
-final class RoomRollStore: ObservableObject {
+final class SnapInboxStore: ObservableObject {
     @Published private(set) var items: [TidyCategory: [MediaItem]] = [:]
     @Published private(set) var isScanning = false
     @Published private(set) var authorization: PHAuthorizationStatus = .notDetermined
     @Published var error: String?
+    @Published private(set) var deferredItems: [String: Date] = [:]
+    private let deferredKey = "jp.egawa.roomroll.deferredScreenshots"
 
-    init() { authorization = PHPhotoLibrary.authorizationStatus(for: .readWrite) }
+    init() {
+        authorization = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        deferredItems = (try? JSONDecoder().decode([String: Date].self, from: UserDefaults.standard.data(forKey: deferredKey) ?? Data())) ?? [:]
+    }
     var isAuthorized: Bool { authorization == .authorized || authorization == .limited }
     func requestAccess() async {
         authorization = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
@@ -53,10 +58,13 @@ final class RoomRollStore: ObservableObject {
         guard isAuthorized else { await requestAccess(); return }
         isScanning = true; error = nil
         defer { isScanning = false }
+        removeExpiredDeferredItems()
         var result: [TidyCategory: [MediaItem]] = [:]
         let all = PHAsset.fetchAssets(with: .image, options: orderedOptions())
         let images = await loadItems(from: all, cap: 100)
-        result[.screenshots] = images.filter { $0.asset.mediaSubtypes.contains(.photoScreenshot) }.sorted { $0.createdAt ?? .distantPast > $1.createdAt ?? .distantPast }
+        result[.screenshots] = images
+            .filter { $0.asset.mediaSubtypes.contains(.photoScreenshot) && !isDeferred($0) }
+            .sorted { $0.createdAt ?? .distantPast > $1.createdAt ?? .distantPast }
         result[.largePhotos] = images.filter { !$0.asset.mediaSubtypes.contains(.photoScreenshot) }.sorted { $0.bytes > $1.bytes }.prefix(40).map { $0 }
         let videos = PHAsset.fetchAssets(with: .video, options: orderedOptions())
         result[.longVideos] = await loadItems(from: videos, cap: 60).sorted { $0.asset.duration > $1.asset.duration }
@@ -69,8 +77,32 @@ final class RoomRollStore: ObservableObject {
         guard !selected.isEmpty else { return true }
         do {
             try await PHPhotoLibrary.shared().performChanges { PHAssetChangeRequest.deleteAssets(selected.map(\.asset) as NSArray) }
+            for item in selected { deferredItems[item.id] = nil }
+            persistDeferredItems()
             await scan(); return true
         } catch { self.error = String(localized: "写真の削除を完了できませんでした。写真アプリの権限を確認してください。"); return false }
+    }
+    var deferredCount: Int { deferredItems.values.filter { $0 > .now }.count }
+    func deferForReview(_ item: MediaItem, days: Int = 7) {
+        deferredItems[item.id] = Calendar.current.date(byAdding: .day, value: days, to: .now) ?? .now
+        persistDeferredItems()
+    }
+    func cancelDeferredReview(_ item: MediaItem) {
+        deferredItems[item.id] = nil
+        persistDeferredItems()
+    }
+    private func isDeferred(_ item: MediaItem) -> Bool {
+        guard let date = deferredItems[item.id] else { return false }
+        return date > .now
+    }
+    private func persistDeferredItems() {
+        if let data = try? JSONEncoder().encode(deferredItems) { UserDefaults.standard.set(data, forKey: deferredKey) }
+    }
+    private func removeExpiredDeferredItems() {
+        let expired = deferredItems.filter { $0.value <= .now }.map(\.key)
+        guard !expired.isEmpty else { return }
+        expired.forEach { deferredItems[$0] = nil }
+        persistDeferredItems()
     }
     private func orderedOptions() -> PHFetchOptions { let options = PHFetchOptions(); options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]; return options }
     private func loadItems(from assets: PHFetchResult<PHAsset>, cap: Int) async -> [MediaItem] {
@@ -102,8 +134,8 @@ final class RoomRollStore: ObservableObject {
     }
 }
 
-struct RoomRollView: View {
-    @StateObject private var store = RoomRollStore()
+struct SnapInboxView: View {
+    @StateObject private var store = SnapInboxStore()
     @EnvironmentObject private var subscription: SubscriptionManager
     @State private var category: TidyCategory?
     @State private var showPaywall = false
@@ -116,22 +148,22 @@ struct RoomRollView: View {
                 if !subscription.isPro { UsageAllowanceCard(remaining: FreeUsageQuota.remaining(namespace: "jp.egawa.roomroll", limit: 30), limit: 30, actionTitle: "Proの機能を見る") { showPaywall = true } }
             }.padding(20) }
                 .background(Color(uiColor: .systemGroupedBackground))
-                .navigationTitle("Photo Cleaner")
+                .navigationTitle("SnapInbox")
                 .task { if store.isAuthorized { await store.scan() } }
                 .sheet(item: $category) { ReviewView(category: $0, items: store.items[$0] ?? [], store: store) }
-                .sheet(isPresented: $showPaywall) { SubscriptionPaywall(name: "Photo Cleaner", benefits: ["無制限の項目レビュー", "最近の大きい写真と長い動画を優先表示", "端末内だけで安全に整理"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/privacy.html")!) }
-                .alert("Photo Cleaner", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(store.error ?? "") }
+                .sheet(isPresented: $showPaywall) { SubscriptionPaywall(name: "SnapInbox", benefits: ["Unlimited screenshot reviews", "Review screenshots again when you are ready", "Private, on-device organization"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/privacy.html")!) }
+                .alert("SnapInbox", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(store.error ?? "") }
         }
     }
     private var header: some View { VStack(alignment: .leading, spacing: 12) {
         HStack { Image(systemName: "sparkles.rectangle.stack.fill").font(.title2).foregroundStyle(.white).frame(width: 48, height: 48).background(.indigo.gradient, in: RoundedRectangle(cornerRadius: 15, style: .continuous)); Spacer(); Label("端末内で処理", systemImage: "lock.fill").font(.caption.weight(.semibold)).foregroundStyle(.secondary) }
-        Text("写真を、気持ちよく整理する。").font(.system(.title2, design: .rounded, weight: .bold))
-        Text("スクリーンショット、長いビデオ、最近の大きい写真を、削除前に一つずつ確認できます。写真をアップロードせず、自動で削除することもありません。").foregroundStyle(.secondary)
+        Text("Screenshots deserve an inbox.").font(.system(.title2, design: .rounded, weight: .bold))
+        Text("Review screenshots on your device. Keep one, remove one, or bring it back when you are ready. Nothing is uploaded or removed automatically.").foregroundStyle(.secondary)
     }.padding(20).frame(maxWidth: .infinity, alignment: .leading).background(.background, in: RoundedRectangle(cornerRadius: 24, style: .continuous)) }
     private var permissionCard: some View { VStack(alignment: .leading, spacing: 12) { Label("写真へのアクセスが必要です", systemImage: "photo.on.rectangle.angled").font(.headline); Text("許可した範囲だけを端末内で見直します。削除は、選んだ項目を確認した場合にだけ実行され、写真アプリの「最近削除した項目」に移動します。").font(.subheadline).foregroundStyle(.secondary); if store.authorization == .denied || store.authorization == .restricted { PrimaryActionButton(title: "設定を開く", systemImage: "gear") { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } } } else { PrimaryActionButton(title: "写真を確認する", systemImage: "checkmark.shield") { Task { await store.requestAccess() } } } }.padding(20).background(.background, in: RoundedRectangle(cornerRadius: 24, style: .continuous)) }
     private var dashboard: some View { VStack(spacing: 14) {
-        HStack(alignment: .firstTextBaseline) { VStack(alignment: .leading, spacing: 4) { Text("レビュー候補").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary); Text("\(store.reviewCount)").font(.system(.largeTitle, design: .rounded, weight: .bold)); Text("削除するかは、すべてあなたが決めます").font(.caption).foregroundStyle(.secondary) }; Spacer(); Button { Task { await store.scan() } } label: { Image(systemName: "arrow.clockwise").font(.headline).frame(width: 42, height: 42).background(Color.indigo.opacity(0.12), in: Circle()) }.buttonStyle(.plain).accessibilityLabel("ライブラリを再確認") }.padding(20).frame(maxWidth: .infinity, alignment: .leading).background(.background, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        ForEach(TidyCategory.allCases) { item in let count = store.count(for: item); Button { category = item } label: { HStack(spacing: 14) { Image(systemName: item.icon).font(.title2).foregroundStyle(.indigo).frame(width: 32); VStack(alignment: .leading, spacing: 3) { Text(item.title).font(.headline); Text(count == 0 ? item.detail : "\(count)件を確認できます") .font(.caption).foregroundStyle(.secondary) }; Spacer(); Text(count == 0 ? "" : "\(count)").font(.subheadline.monospacedDigit().weight(.bold)).foregroundStyle(.secondary); Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(.tertiary) }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(.background, in: RoundedRectangle(cornerRadius: 20, style: .continuous)) }.buttonStyle(.plain) }
+        HStack(alignment: .firstTextBaseline) { VStack(alignment: .leading, spacing: 4) { Text("Screenshot inbox").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary); Text("\(store.count(for: .screenshots))").font(.system(.largeTitle, design: .rounded, weight: .bold)); Text(store.deferredCount == 0 ? "Decide what matters now" : "\(store.deferredCount) screenshot(s) are waiting for a later review").font(.caption).foregroundStyle(.secondary) }; Spacer(); Button { Task { await store.scan() } } label: { Image(systemName: "arrow.clockwise").font(.headline).frame(width: 42, height: 42).background(Color.indigo.opacity(0.12), in: Circle()) }.buttonStyle(.plain).accessibilityLabel("Refresh inbox") }.padding(20).frame(maxWidth: .infinity, alignment: .leading).background(.background, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        ForEach([TidyCategory.screenshots]) { item in let count = store.count(for: item); Button { category = item } label: { HStack(spacing: 14) { Image(systemName: item.icon).font(.title2).foregroundStyle(.indigo).frame(width: 32); VStack(alignment: .leading, spacing: 3) { Text("Review screenshots").font(.headline); Text(count == 0 ? "Your inbox is clear" : "\(count) screenshot(s) ready to review") .font(.caption).foregroundStyle(.secondary) }; Spacer(); Text(count == 0 ? "" : "\(count)").font(.subheadline.monospacedDigit().weight(.bold)).foregroundStyle(.secondary); Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(.tertiary) }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(.background, in: RoundedRectangle(cornerRadius: 20, style: .continuous)) }.buttonStyle(.plain) }
     }.frame(maxWidth: .infinity) }
 }
 
@@ -140,7 +172,7 @@ private struct ReviewView: View {
     @EnvironmentObject private var subscription: SubscriptionManager
     let category: TidyCategory
     let items: [MediaItem]
-    @ObservedObject var store: RoomRollStore
+    @ObservedObject var store: SnapInboxStore
     @State private var selected = Set<String>()
     @State private var confirming = false
     @State private var deleting = false
@@ -155,13 +187,13 @@ private struct ReviewView: View {
 /// A fast, reversible review mode. Decisions remain staged in memory until the
 /// user explicitly confirms the final deletion dialog.
 private struct SwipeReviewView: View {
-    private enum Decision: Equatable { case keep, remove }
+    private enum Decision: Equatable { case keep, remove, later }
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var subscription: SubscriptionManager
     let category: TidyCategory
     let items: [MediaItem]
-    @ObservedObject var store: RoomRollStore
+    @ObservedObject var store: SnapInboxStore
 
     @State private var position = 0
     @State private var history: [Decision] = []
@@ -261,6 +293,12 @@ private struct SwipeReviewView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(.red)
+            Button { decide(.later) } label: {
+                Label("あとで確認", systemImage: "clock")
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            }
+            .buttonStyle(.bordered)
             Button { decide(.keep) } label: {
                 Label("残す", systemImage: "heart")
                     .frame(maxWidth: .infinity)
@@ -298,6 +336,7 @@ private struct SwipeReviewView: View {
             return
         }
         if decision == .remove { pendingRemoval.insert(item.id) }
+        if decision == .later { store.deferForReview(item) }
         history.append(decision)
         withAnimation(.easeInOut(duration: 0.2)) { position += 1; cardOffset = .zero }
     }
@@ -306,6 +345,7 @@ private struct SwipeReviewView: View {
         guard position > 0, let decision = history.popLast() else { return }
         position -= 1
         if decision == .remove { pendingRemoval.remove(items[position].id) }
+        if decision == .later { store.cancelDeferredReview(items[position]) }
     }
 
     private func removeMarkedItems() {

@@ -1,11 +1,11 @@
-name: RoomRoll
+name: SnapInbox
 options:
   bundleIdPrefix: jp.egawa
   deploymentTarget: { iOS: "17.0" }
 settings:
   base: { MARKETING_VERSION: 1.0.0, CURRENT_PROJECT_VERSION: 1, SWIFT_VERSION: 5.0 }
 targets:
-  RoomRoll:
+  SnapInbox:
     type: application
     platform: iOS
     sources: [Sources, ../Shared, Assets.xcassets]
@@ -13,9 +13,9 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: jp.egawa.roomroll
-        INFOPLIST_KEY_CFBundleDisplayName: Photo Cleaner
+        INFOPLIST_KEY_CFBundleDisplayName: SnapInbox
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "スクリーンショット、長い動画、最近の大きい写真を端末内で見直すために写真ライブラリを使用します。"
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "スクリーンショットを端末内で見直し、あとで確認する項目を整理するために写真ライブラリを使用します。"
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "確認して選んだ項目だけを写真ライブラリの「最近削除した項目」へ移動するために使用します。"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"

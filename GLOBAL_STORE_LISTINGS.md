@@ -9,7 +9,7 @@ All five products are device-local utilities. They require no account, do not se
 | 手渡しプリント | Handy Print | Turn photos into a shareable PDF | Choose one, two, or four photos and make a clean PDF for a printer, message, or nearby share. |
 | 会議前メモ | Meeting Spark | Capture the next action | Give a meeting a title, record a short voice memo, and leave with the next action in one place. |
 | 集中ポケット | Focus Pocket | A small timer for one task | Name the task, start a 15, 25, or 45 minute focus session, and keep a simple completion history. |
-| Photo Cleaner: Review & Remove | Photo Cleaner: Review & Remove | Review photos before removing them | Review screenshots, long videos, and recent large photos on your device. Nothing is removed unless you select and confirm it. |
+| SnapInbox | SnapInbox: Screenshot Organizer | Review screenshots without losing them | Review screenshots one at a time. Keep, delete, or defer each decision until you are ready. |
 | 持ち物期限帳 | Warranty Ledger | Remember what expires next | Save warranty, return, and replacement dates, then see the next deadline at a glance. |
 | 出発チェック | Leave Check | A checklist before you leave | Build a simple list for a trip, commute, or errand, and check each item off before heading out. |
 | 割り勘メモ | Receipt Split | Split a bill clearly | Enter a total and group size to calculate a fair per-person amount and keep a local record. |
@@ -39,7 +39,7 @@ Meeting Spark keeps the meeting title, a short voice memo, and the next action t
 
 Focus Pocket is a simple timer for the task in front of you. Pick 15, 25, or 45 minutes, pause when life interrupts, and review completed sessions. There is no account and your history stays on your device.
 
-### Photo Cleaner: Review & Remove
+### SnapInbox
 
 Photo Cleaner helps you review screenshots, long videos, and recent large photos without handing your library to a server. Choose a category, inspect each item, and select only what you no longer need. Before anything is removed, iOS asks for your confirmation and moves it to Recently Deleted. There is no account, automatic deletion, or cloud upload. Photo Cleaner does not clear iOS system storage or other apps’ data.
 
@@ -78,7 +78,7 @@ Use only words that describe the app accurately. Do not use competitor names or 
 | Handy Print | photo,pdf,print,layout,share,collage |
 | Meeting Spark | voice,memo,meeting,recording,action,notes |
 | Focus Pocket | focus,timer,pomodoro,task,productivity,session |
-| Photo Cleaner: Review & Remove | cleaner,photo,cleanup,storage,screenshot,video,organize |
+| SnapInbox | screenshot,inbox,organize,cleanup,declutter,review,storage |
 | Warranty Ledger | warranty,return,expiry,deadline,receipt,organize |
 | Leave Check | checklist,packing,travel,errand,reminder,prepare |
 | Receipt Split | split,bill,expense,calculator,group,share |
