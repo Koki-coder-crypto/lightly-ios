@@ -19,14 +19,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DEVICE_TYPE="$(xcrun simctl list devicetypes | sed -n 's/.*\(com.apple.CoreSimulator.SimDeviceType.iPhone-.*Pro-Max\).*/\1/p' | tail -1)"
-          test -n "$DEVICE_TYPE"
-          RUNTIME="$(xcrun simctl list runtimes | sed -n 's/.*\(com.apple.CoreSimulator.SimRuntime.iOS-[0-9-]*\).*/\1/p' | tail -1)"
-          test -n "$RUNTIME"
-          UDID="$(xcrun simctl create SnapInboxStoreShots "$DEVICE_TYPE" "$RUNTIME")"
-          trap 'xcrun simctl delete "$UDID" || true' EXIT
+          UDID="$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ { print $2; exit }')"
+          test -n "$UDID"
           xcrun simctl boot "$UDID"
-          open -a Simulator
           xcrun simctl bootstatus "$UDID" -b
           xcodebuild -project SnapInbox.xcodeproj -scheme SnapInbox -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$UDID" CODE_SIGNING_ALLOWED=NO build
           APP_PATH="$(find "$PWD" -path '*Build/Products/Debug-iphonesimulator/SnapInbox.app' -print -quit)"
