@@ -17,7 +17,7 @@ SnapInbox turns screenshots into a small, private review inbox. A person can kee
 | Locale | Name | Subtitle |
 | --- | --- | --- |
 | Japanese | SnapInbox | スクショを、あとで迷わず整理 |
-| English (U.S.) | SnapInbox: Screenshot Organizer | Review screenshots without losing them |
+| English (U.S.) | SnapInbox: Screenshot Inbox | Review screenshots without losing them |
 
 **English description**
 

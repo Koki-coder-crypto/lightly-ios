@@ -9,7 +9,7 @@ All five products are device-local utilities. They require no account, do not se
 | 手渡しプリント | Handy Print | Turn photos into a shareable PDF | Choose one, two, or four photos and make a clean PDF for a printer, message, or nearby share. |
 | 会議前メモ | Meeting Spark | Capture the next action | Give a meeting a title, record a short voice memo, and leave with the next action in one place. |
 | 集中ポケット | Focus Pocket | A small timer for one task | Name the task, start a 15, 25, or 45 minute focus session, and keep a simple completion history. |
-| SnapInbox | SnapInbox: Screenshot Organizer | Review screenshots without losing them | Review screenshots one at a time. Keep, delete, or defer each decision until you are ready. |
+| SnapInbox: Screenshot Inbox | SnapInbox: Screenshot Inbox | Review screenshots without losing them | Review screenshots one at a time. Keep, delete, or defer each decision until you are ready. |
 | 持ち物期限帳 | Warranty Ledger | Remember what expires next | Save warranty, return, and replacement dates, then see the next deadline at a glance. |
 | 出発チェック | Leave Check | A checklist before you leave | Build a simple list for a trip, commute, or errand, and check each item off before heading out. |
 | 割り勘メモ | Receipt Split | Split a bill clearly | Enter a total and group size to calculate a fair per-person amount and keep a local record. |
