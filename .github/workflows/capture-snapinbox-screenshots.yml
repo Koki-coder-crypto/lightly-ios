@@ -23,8 +23,8 @@ jobs:
           test -n "$UDID"
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
-          xcodebuild -project SnapInbox.xcodeproj -scheme SnapInbox -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$UDID" CODE_SIGNING_ALLOWED=NO build
-          APP_PATH="$(find "$PWD" -path '*Build/Products/Debug-iphonesimulator/SnapInbox.app' -print -quit)"
+          xcodebuild -project SnapInbox.xcodeproj -scheme SnapInbox -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$PWD/build/DerivedData" CODE_SIGNING_ALLOWED=NO build
+          APP_PATH="$PWD/build/DerivedData/Build/Products/Debug-iphonesimulator/SnapInbox.app"
           test -d "$APP_PATH"
           xcrun simctl install "$UDID" "$APP_PATH"
           xcrun simctl launch "$UDID" jp.egawa.roomroll
