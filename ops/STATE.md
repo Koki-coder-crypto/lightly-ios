@@ -6,7 +6,7 @@
 - **Market:** English-language TikTok as the primary acquisition experiment; App Store English (U.S.) is the primary product page.
 - **Current hypothesis:** People with recurring screenshot clutter will return for a weekly, safe review when they can defer a screenshot instead of deleting it immediately.
 - **Experiment:** EXP-001 (onboarding value message vs. direct permission request).
-- **Owner:** Codex for research, implementation, test, asset generation, and queued distribution; account holder for OAuth, API audits, App Store submission, and legal/financial settings.
+- **Owner:** Codex for research, implementation, tests, commits, CI, TestFlight/App Store Connect work permitted by configured credentials, asset generation, and queued distribution. The account holder is needed only for interactive OAuth/audit approval, platform terms, identity, payment, tax, or legal settings.
 
 ## Guardrails
 
