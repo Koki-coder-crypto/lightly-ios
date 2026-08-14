@@ -32,6 +32,18 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/store-screenshots"
           xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/store-screenshots/SnapInbox-01.png"
           sips -z 2778 1284 "$GITHUB_WORKSPACE/store-screenshots/SnapInbox-01.png" --out "$GITHUB_WORKSPACE/store-screenshots/SnapInbox-01-6.5.png"
+      - name: Upload store screenshot to App Store Connect
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          gem install fastlane --no-document
+          mkdir -p fastlane/screenshots/en-US
+          cp "$GITHUB_WORKSPACE/store-screenshots/SnapInbox-01-6.5.png" fastlane/screenshots/en-US/01-snapinbox.png
+          ruby -rjson -e 'File.write("appstore-api-key.json", JSON.generate({key_id: ENV.fetch("APPSTORE_KEY_ID"), issuer_id: ENV.fetch("APPSTORE_ISSUER_ID"), key: ENV.fetch("APPSTORE_PRIVATE_KEY")}))'
+          fastlane deliver --api_key_path appstore-api-key.json --app_identifier jp.egawa.roomroll --skip_binary_upload true --skip_metadata true --skip_screenshots false --force true
       - uses: actions/upload-artifact@v4
         with:
           name: snapinbox-store-screenshots
