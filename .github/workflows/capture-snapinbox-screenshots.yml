@@ -47,6 +47,8 @@ jobs:
           skip_binary_upload true
           skip_metadata true
           skip_screenshots false
+          run_precheck_before_submit false
+          overwrite_screenshots true
           RUBY
           ruby -rjson -e 'File.write("appstore-api-key.json", JSON.generate({key_id: ENV.fetch("APPSTORE_KEY_ID"), issuer_id: ENV.fetch("APPSTORE_ISSUER_ID"), key: ENV.fetch("APPSTORE_PRIVATE_KEY")}))'
           fastlane deliver --api_key_path appstore-api-key.json --force true
