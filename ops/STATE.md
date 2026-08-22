@@ -23,7 +23,7 @@
 ## Next safe actions
 
 1. Sign in to App Store Connect in the shared browser session, then complete the remaining App Review gates for build 1.0.0 (1).
-2. Screenshot capture workflow validation is running: GitHub Actions run `32554329454` on commit `0506d17`; record the outcome before reusing the workflow.
+2. Screenshot capture workflow validation passed: GitHub Actions run `32554329454` built SnapInbox, captured the simulator screen, uploaded the App Store screenshot, and stored the artifact successfully on 2026-08-22.
 3. Build and verify the renamed SnapInbox simulator target.
 4. Test screenshot defer/review behavior on a physical device.
 5. Complete EXP-001 before making another onboarding change.
