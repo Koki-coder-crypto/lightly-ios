@@ -37,3 +37,11 @@ This is the executive report for the account holder. Append one entry at the 20:
 - Learned: The screenshot asset pipeline is release-ready; TikTok and YouTube publishing remain correctly blocked by missing OAuth/API audit approval. Store submission remains blocked only by the shared App Store Connect browser login.
 - Next action: Sign in, verify the existing pricing and content-rights selections, then submit build 1.0.0 (1) to App Review. Start 72-hour measurement only after a permitted post receives an actual timestamp.
 - Blocker requiring account-holder action: sign in to the SnapInbox-owning Apple ID in the shared App Store Connect browser session, then reply "ログインできた".
+
+## 2026-08-23
+
+- Shipped: No product behavior changed; the validated build and screenshot-delivery pipeline remain intact, and three original campaign assets remain queued with separate campaign tokens.
+- Measured: No post timestamp, campaign traffic, first-time download, purchase, refund, or subscription metric is available. EXP-001 remains undecided.
+- Learned: Holding the product and content queues steady prevents unmeasurable overlapping experiments while publication and store-submission gates are incomplete.
+- Next action: Resume App Store Connect release work immediately after the shared session is signed in; do not start a 72-hour timer until an approved channel actually publishes an item.
+- Blocker requiring account-holder action: sign in to the SnapInbox-owning Apple ID in the shared App Store Connect browser session, then reply "ログインできた".
