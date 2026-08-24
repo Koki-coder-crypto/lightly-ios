@@ -45,3 +45,11 @@ This is the executive report for the account holder. Append one entry at the 20:
 - Learned: Holding the product and content queues steady prevents unmeasurable overlapping experiments while publication and store-submission gates are incomplete.
 - Next action: Resume App Store Connect release work immediately after the shared session is signed in; do not start a 72-hour timer until an approved channel actually publishes an item.
 - Blocker requiring account-holder action: sign in to the SnapInbox-owning Apple ID in the shared App Store Connect browser session, then reply "ログインできた".
+
+## 2026-08-24
+
+- Shipped: No product, pricing, paywall, or deletion-flow change was made. The passing screenshot-delivery pipeline and the three original content queue entries remain available.
+- Measured: There is no published campaign timestamp and no attributed acquisition or revenue data; EXP-001 remains undecided.
+- Learned: The no-publish gates remain effective: TikTok and YouTube lack approved OAuth/API audit status, while App Store submission is waiting on the shared browser's Apple login.
+- Next action: After App Store Connect sign-in, finish the existing build 1.0.0 (1) review submission. Keep all content queued until a provider audit is approved.
+- Blocker requiring account-holder action: sign in to the SnapInbox-owning Apple ID in the shared App Store Connect browser session, then reply "ログインできた".
