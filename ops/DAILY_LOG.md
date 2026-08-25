@@ -53,3 +53,11 @@ This is the executive report for the account holder. Append one entry at the 20:
 - Learned: The no-publish gates remain effective: TikTok and YouTube lack approved OAuth/API audit status, while App Store submission is waiting on the shared browser's Apple login.
 - Next action: After App Store Connect sign-in, finish the existing build 1.0.0 (1) review submission. Keep all content queued until a provider audit is approved.
 - Blocker requiring account-holder action: sign in to the SnapInbox-owning Apple ID in the shared App Store Connect browser session, then reply "ログインできた".
+
+## 2026-08-25
+
+- Shipped: No product or content change was made; the passing build and App Store screenshot-delivery pipeline remain stable.
+- Measured: No approved publication has occurred, so no campaign or revenue metrics are available and EXP-001 is still undecided.
+- Learned: Maintaining the frozen scope avoids confounding an experiment before the app can be submitted and acquisition can begin.
+- Next action: Continue App Store submission as soon as the shared browser is signed in; do not publish social content before the documented OAuth and audit gates are approved.
+- Blocker requiring account-holder action: sign in to the SnapInbox-owning Apple ID in the shared App Store Connect browser session, then reply "ログインできた".
