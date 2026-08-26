@@ -61,3 +61,11 @@ This is the executive report for the account holder. Append one entry at the 20:
 - Learned: Maintaining the frozen scope avoids confounding an experiment before the app can be submitted and acquisition can begin.
 - Next action: Continue App Store submission as soon as the shared browser is signed in; do not publish social content before the documented OAuth and audit gates are approved.
 - Blocker requiring account-holder action: sign in to the SnapInbox-owning Apple ID in the shared App Store Connect browser session, then reply "ログインできた".
+
+## 2026-08-26
+
+- Shipped: No code or external content was changed. The validated build, App Store screenshot asset, and three original content briefs remain ready.
+- Measured: There is still no campaign traffic, purchase, refund, or subscription signal; EXP-001 remains undecided and no 72-hour evaluation can start.
+- Learned: The operating gates are functioning as intended—no unapproved social posting and no unmeasurable product change.
+- Next action: Resume App Store submission immediately after the shared App Store Connect session is signed in. Maintain the content queue until official channel OAuth and audit approval are documented.
+- Blocker requiring account-holder action: sign in to the SnapInbox-owning Apple ID in the shared App Store Connect browser session, then reply "ログインできた".
