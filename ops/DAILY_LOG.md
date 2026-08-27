@@ -69,3 +69,11 @@ This is the executive report for the account holder. Append one entry at the 20:
 - Learned: The operating gates are functioning as intended—no unapproved social posting and no unmeasurable product change.
 - Next action: Resume App Store submission immediately after the shared App Store Connect session is signed in. Maintain the content queue until official channel OAuth and audit approval are documented.
 - Blocker requiring account-holder action: sign in to the SnapInbox-owning Apple ID in the shared App Store Connect browser session, then reply "ログインできた".
+
+## 2026-08-27
+
+- Shipped: No product or channel changes were made. The previously validated build and screenshot-delivery workflow remain ready for release work.
+- Measured: No campaign has been published and no acquisition, conversion, refund, or retention data exists; EXP-001 remains undecided.
+- Learned: The only remaining release boundary is interactive sign-in to the account-owning Apple ID. Repeated operating runs cannot safely advance that boundary.
+- Next action: After sign-in, verify the release form and submit build 1.0.0 (1) to App Review; maintain the social queue until provider audit approval.
+- Blocker requiring account-holder action: sign in to the SnapInbox-owning Apple ID in the shared App Store Connect browser session, then reply "ログインできた".
