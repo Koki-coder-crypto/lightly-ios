@@ -151,7 +151,7 @@ struct SnapInboxView: View {
                 .navigationTitle("SnapInbox")
                 .task { if store.isAuthorized { await store.scan() } }
                 .sheet(item: $category) { ReviewView(category: $0, items: store.items[$0] ?? [], store: store) }
-                .sheet(isPresented: $showPaywall) { SubscriptionPaywall(name: "SnapInbox", benefits: ["Unlimited screenshot reviews", "Review screenshots again when you are ready", "Private, on-device organization"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/privacy.html")!) }
+                .sheet(isPresented: $showPaywall) { SubscriptionPaywall(name: "SnapInbox", benefits: ["Unlimited screenshot reviews", "Review screenshots again when you are ready", "Private, on-device organization"], privacyURL: URL(string: "https://koki-coder-crypto.github.io/lightly-ios/snapinbox/privacy.html")!) }
                 .alert("SnapInbox", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(store.error ?? "") }
         }
     }

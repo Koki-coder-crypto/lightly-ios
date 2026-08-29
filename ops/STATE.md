@@ -14,6 +14,13 @@
 - **Frozen:** price, paywall, subscription configuration, product-page copy, notifications, categorization, bulk actions, and all R-001–R-003 candidates.
 - **Permitted implementation:** only the onboarding sequence needed to compare an explanation before photo permission against direct photo permission, with no change to deletion behavior.
 
+## Release decision — 2026-08-29 JST
+
+- **Market:** Japan and the United States; acquisition is ASO-only for the initial release window.
+- **Revenue setup:** ¥700 / $4.99 monthly with no trial; ¥4,900 / $34.99 annual with a seven-day trial configured in App Store Connect.
+- **Submission gate:** verify purchases, restoration, expiry handling, photo safety, accessibility, localized metadata, and physical-device behavior before requesting review.
+- **Scope:** this release setup does not change EXP-001's onboarding variable or the deletion behavior.
+
 ## Guardrails
 
 - Only one experiment may change product behavior at a time.

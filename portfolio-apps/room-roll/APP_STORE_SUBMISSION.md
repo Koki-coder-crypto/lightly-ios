@@ -1,19 +1,19 @@
-# Photo Cleaner: Review & Remove — 提出メモ
+# SnapInbox — 提出メモ
 
 ## App Store Connect
 
-- 表示名（日本語）: `Photo Cleaner: Review & Remove`
-- 表示名（英語）: `Photo Cleaner: Review & Remove`
+- 表示名（日本語）: `SnapInbox`
+- 表示名（英語）: `SnapInbox`
 - サブタイトル（日本語）: `スクショ・動画を確認して安全に整理`
 - サブタイトル（英語）: `Review photos before removing them`
 - Bundle ID: `jp.egawa.roomroll`
 - SKU: `roomroll-ios-001`
 - カテゴリ: ユーティリティ
 - 年齢制限: 4+
-- サブスクグループ: `Photo Cleaner Pro`
+- サブスクグループ: `SnapInbox Pro`
 - 商品ID: `jp.egawa.roomroll.pro.monthly` / `jp.egawa.roomroll.pro.yearly`
-- サポート: `https://koki-coder-crypto.github.io/lightly-ios/support.html`
-- プライバシー: `https://koki-coder-crypto.github.io/lightly-ios/privacy.html`
+- サポート: `https://koki-coder-crypto.github.io/lightly-ios/snapinbox/support.html`
+- プライバシー: `https://koki-coder-crypto.github.io/lightly-ios/snapinbox/privacy.html`
 
 ## 掲載原稿（日本語）
 

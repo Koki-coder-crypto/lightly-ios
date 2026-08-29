@@ -63,6 +63,8 @@ final class SubscriptionManager: ObservableObject {
         } ?? []
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }
+            guard transaction.revocationDate == nil,
+                  (transaction.expirationDate ?? .distantFuture) > .now else { continue }
             if [monthlyID, yearlyID].contains(transaction.productID) { isPro = true }
         }
     }
@@ -70,7 +72,11 @@ final class SubscriptionManager: ObservableObject {
     func purchase(_ product: Product) async {
         isLoading = true; defer { isLoading = false }
         do {
-            guard case .success(let result) = try await product.purchase(), case .verified(let transaction) = result else { return }
+            guard case .success(let result) = try await product.purchase() else { return }
+            guard case .verified(let transaction) = result else {
+                errorMessage = "The purchase could not be verified. Please try again."
+                return
+            }
             await transaction.finish()
             await refresh()
         } catch { errorMessage = "Your purchase could not be completed. Please try again." }
